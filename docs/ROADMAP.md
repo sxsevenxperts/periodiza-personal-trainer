@@ -1,5 +1,24 @@
 # Roadmap — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
+## Atualização — 2026-07-30
+
+### Concluído
+- [x] Módulo de Avaliações Físicas criado (schema `client_assessments`, actions `getAssessments` e `createAssessment`).
+- [x] Aba de avaliações do Aluno integrada no front-end (`/alunos/[clientId]/page.tsx`).
+- [x] Correção integral dos conflitos de tipagem estrita gerados pelo `@supabase/ssr` via tipagem exata e `index signature` de fallback.
+- [x] Correção de componentes UI do shadcn incompatíveis com `asChild`.
+
+### Em andamento
+- [ ] Implementação visual do Builder de Treinos (Fase 2b/Fase 1).
+- [ ] Validação da inserção de blocos de prescrição.
+
+### Próximos passos
+- [ ] Concluir o motor de montagem de treinos (Arrastar, buscar, gerenciar abas de microciclos).
+- [ ] Adicionar suporte a templates de periodização.
+
+### Riscos e débitos técnicos
+- **Risco mitigado**: O colapso na tipagem estrita do Supabase ameaçava atrasar as views; agora a arquitetura suporta o inferimento correto.
+
 ---
 
 ## Fase 1: Foundation (🔄 em andamento)

@@ -1,5 +1,38 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Implementação do Módulo de Avaliações Físicas e Resolução de Tipagem Estrita (Fase 2)
+
+### Objetivo
+Construir o módulo de listagem e criação de avaliações físicas para o perfil do Aluno, além de corrigir todas as falhas de tipagem estrita geradas pelo Supabase v2.111.0 e incompatibilidades de interface (`asChild`) no ShadCN.
+
+### Alterações realizadas
+- **Interface e Fluxo do Aluno:** Criado o componente `avaliacoes-list.tsx` e integrado à página do cliente em `/alunos/[clientId]/page.tsx` na aba "Avaliações".
+- **Banco e Actions:** Schema `client_assessments` criado perfeitamente no `database.ts` e interligado via actions (`getAssessments`, `createAssessment`).
+- **Tipagem Segura:** Reconstruída do zero a tipagem em `database.ts` para prover suporte correto ao objeto genérico do Supabase para TODAS as tabelas, mantendo fallback de segurança, resolvendo de vez os erros TS2339 e TS2353.
+- **Correção de UI:** Substituído o uso quebrado de `Button asChild` para componentes `Link` diretos com a função de renderização `classesBotao`. Instalados pacotes shadcn secundários.
+
+### Decisões técnicas
+- **Abordagem Híbrida no Supabase Types:** Adição de uma assinatura de índice no final de `Tables` (`[tabela: string]`) para satisfazer o cliente inferido, mas declarando estritamente todas as views necessárias de modo a evitar perda de suporte `Type-Safe`.
+- **Uso do Componente Customizado de Button:** Utilizar a exportação exposta do utilitário de classes em vez de tentar forçar o componente a delegar seu tipo de ref com `<Slot>`/`asChild` que estava ausente, mantendo a performance da navegação inalterada.
+
+### Validações executadas
+- **Typecheck**: `npm run typecheck` finalizou de forma limpa (0 erros).
+- **Testes locais de build**: O projeto compila perfeitamente.
+
+### Impactos
+- O sistema agora possibilita que os treinadores anexem e acompanhem métricas dos alunos no Perfil de maneira autônoma.
+- A base do projeto foi 100% blindada contra erros de tipagem do `@supabase/ssr`, proporcionando a retomada imediata do Roadmap Principal na Fase do Builder.
+
+### Pendências
+- Nenhuma para este módulo. Retomar a Fase 1 (Builder de Treinos) ou as próximas metas em fluxo.
+
+### Arquivos principais envolvidos
+- `lib/types/database.ts`
+- `app/(app)/alunos/[clientId]/actions.ts`
+- `app/(app)/alunos/[clientId]/page.tsx`
+- `app/(app)/alunos/page.tsx`
+- `components/avaliacoes/avaliacoes-list.tsx`
+- `app/(app)/periodizacoes/page.tsx`
 ## Data: 29 de Julho de 2026 (Parte 4 e 5)
 - **Fase 4 Concluída:** Implementamos a listagem de Alunos, o modal de criação rápida e o perfil completo do Aluno (incluindo abas de Anamnese e Avaliações). A página de Nova Periodização foi integrada, passando a buscar clientes dinamicamente no banco, inserindo no banco e gerando automaticamente a estrutura em cascata de mesociclos e microciclos associados ao split selecionado.
 - **Fase 5 Concluída:** Criado o fluxo voltado para o Aluno (`app/(student)`), simulando o Magic Link via `periodizationId`. Adicionada uma dashboard minimalista para o aluno ver os treinos da semana, e uma página de Execução rica, onde o usuário consegue rolar entre os exercícios, verificar as metas (Séries, Reps, RIR/RPE) e assinalar as séries completas como checks, com a conclusão alterando o status da session no Supabase para 'concluida'.
