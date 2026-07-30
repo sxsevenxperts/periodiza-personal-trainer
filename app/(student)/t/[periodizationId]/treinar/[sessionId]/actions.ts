@@ -26,7 +26,10 @@ export async function getSessionExecutionData(sessionId: string) {
 
   // Sort items by order_index
   if (data?.prescription_items) {
-    data.prescription_items.sort((a: any, b: any) => a.order_index - b.order_index)
+    data.prescription_items.sort(
+      (a: { order_index: number }, b: { order_index: number }) =>
+        a.order_index - b.order_index,
+    )
   }
 
   return data

@@ -9,10 +9,11 @@ import { Label } from '@/components/ui/label'
 import { createAssessment } from '@/app/(app)/alunos/[clientId]/actions'
 import { Loader2, Plus, Calendar } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import type { AvaliacaoResumo } from '@/lib/types/dominio'
 
 interface AvaliacoesListProps {
   clientId: string
-  assessments: any[]
+  assessments: AvaliacaoResumo[]
 }
 
 export function AvaliacoesList({ clientId, assessments }: AvaliacoesListProps) {

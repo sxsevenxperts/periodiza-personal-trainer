@@ -1,5 +1,354 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Conecta a RPC search_exercises ao catálogo do builder
+
+### Objetivo
+A migration 0010 entregou a RPC `search_exercises` com busca sem acento,
+tolerância a erro de digitação e anotações contextuais do aluno, mas nenhuma
+tela a consumia — o catálogo lateral do builder ainda buscava com `ilike`.
+Esta entrada registra a conexão da RPC à interface.
+
+### Alterações realizadas
+
+**`app/(app)/periodizacoes/[periodizationId]/actions.ts`**
+- `searchExercises(query, muscleId, contexto?)` agora chama a RPC via
+  `supabase.rpc('search_exercises', ...)` em vez de montar um `ilike`.
+- Novo parâmetro `contexto: { clientId, microcycleId }`, que habilita as
+  anotações de restrição/equipamento e a de "já prescrito".
+- `mapearResultadoBusca()` normaliza as colunas `out_*` da RPC para o shape que
+  a UI consome.
+- `buscarExerciciosSimplificado()` — fallback por `ilike`, acionado somente
+  quando a RPC não existe no banco (migration não aplicada). Retorna
+  `buscaSimplificada: true` e grava um aviso explícito no log do servidor.
+
+**`supabase/migrations/0010_session_label_and_search.sql`**
+- `p_muscle text` → `p_muscle_id uuid`, e o filtro passou de
+  `mus.name_pt = p_muscle` para `e.primary_muscle_id = p_muscle_id`.
+- Adicionado `drop function if exists` para a assinatura de 8 argumentos, para
+  que a troca de nome de parâmetro não deixe duas versões coexistindo.
+
+**`components/builder/catalog-sidebar.tsx`**
+- Recebe `clientId` e `microcycleId` e os repassa à busca.
+- Busca centralizada em `executarBusca()` com `useCallback`, eliminando a
+  duplicação entre a carga inicial e o re-disparo por filtro.
+- Renderiza as anotações contextuais como etiquetas ("Restrito", "Sem
+  equipamento", "Já prescrito"), cada uma com `title` explicando o motivo, no
+  padrão zinc/amber do projeto.
+- Exibe o músculo primário e o padrão de movimento no resultado.
+- Aviso discreto de "busca simplificada" quando o fallback é acionado, visível
+  apenas fora de produção.
+
+**`components/builder/workout-builder.tsx` e a página do builder**
+- `clientId` e `microcycleId` descem da página → builder → sidebar.
+- A página passou a selecionar `client_id` na query de `periodizations`.
+
+**`lib/types/dominio.ts`**
+- `ExercicioBusca` ganhou os campos de anotação, opcionais — o fallback por
+  `ilike` não os produz.
+
+### Decisões técnicas
+- **Fallback em vez de quebra**: a 0010 ainda não está aplicada em produção. Se
+  a busca chamasse a RPC sem alternativa, o catálogo pararia de funcionar no
+  próximo deploy. O fallback preserva a tela; o registro no log e o aviso em
+  desenvolvimento evitam que a degradação passe despercebida. É código de
+  transição, marcado para remoção no roadmap.
+- **Detecção restrita da falha**: o fallback só entra quando o erro indica
+  função ausente (`PGRST202` ou mensagem citando `search_exercises`). Qualquer
+  outro erro é propagado como falha, para não mascarar problema real.
+- **`p_muscle_id` em vez de `p_muscle`**: a UI sempre enviou o id do músculo;
+  comparar por `name_pt` nunca casaria, e comparar por nome é frágil a
+  renomeações. Corrigido na própria 0010, que ainda não foi aplicada — não
+  precisou de migration nova.
+- **Anotações como etiquetas com `title`**: a spec pedia marcadores de cor
+  (vermelho/amarelo/azul). Texto curto com cor e tooltip comunica o motivo sem
+  depender só da cor, o que também ajuda quem não distingue as cores.
+
+### Validações executadas
+
+| Verificação | Resultado |
+|---|---|
+| `npx tsc --noEmit` | 0 erros |
+| `npm run lint` | 0 erros, 0 avisos |
+| `npm run build` | sucesso, 11/11 páginas |
+| `npm test` | sem arquivos de teste no projeto (inalterado) |
+
+Migration revalidada do zero contra **PostgreSQL 16 real**, com as 10 migrations
+aplicadas em sequência sobre banco novo:
+
+- 0001–0010: todas aplicam sem erro.
+- Busca: nome exato, alias ("hip thrust" → Elevação pélvica), erro de digitação
+  ("agacahmento" → Agachamento livre), sem acento ("gluteo" → Elevação pélvica).
+- `p_muscle_id` com UUID filtra corretamente; com `null` devolve tudo.
+- Chamada com exatamente os 5 parâmetros nomeados que a action envia resolve
+  para a função (os demais usam default).
+- Apenas uma assinatura registrada em `pg_proc` — os `drop function` fizeram efeito.
+- Confirmado que o erro de função ausente cita o nome da função, o que valida o
+  casamento por mensagem usado no fallback.
+
+**Não verificado:** o caminho do fallback em execução real contra o PostgREST
+do Supabase — depende de um ambiente com a 0010 ausente e o app rodando. A
+condição de detecção foi verificada apenas no nível da mensagem de erro do
+PostgreSQL.
+
+### Impactos
+- **Usuário**: buscar "gluteo" acha "Glúteo", "agacahmento" acha "Agachamento" e
+  "hip thrust" acha "Elevação pélvica". O resultado avisa quando o exercício é
+  contraindicado na anamnese, quando o aluno não tem o equipamento e quando já
+  está prescrito em outro treino da semana — antes de adicionar.
+- **Negócio**: a busca contextual da SPEC-01 sai do banco e chega à tela.
+- **Arquitetura**: a lógica de filtro e anotação vive no banco, numa função
+  `security invoker` que respeita RLS; a UI só apresenta.
+
+### Pendências
+- **A 0010 continua não aplicada no Supabase.** Até isso acontecer, a busca roda
+  em modo simplificado — sem acento, typo, alias nem anotações.
+- Remover o fallback `ilike` depois de aplicar a 0010.
+- `out_weekly_volume_series` ainda retorna 0 (agregação = Fase 4).
+- `client_anamnesis.restricted_movement_patterns` não é preenchida por nenhuma
+  tela (UI de anamnese = Fase 4); sem dados, a anotação "Restrito" nunca aparece.
+- Nenhum teste automatizado existe no projeto.
+- **EasyPanel**: o build segue falhando porque aponta para `main`, onde o
+  Dockerfile não existe. Ver relatório da sessão.
+
+### Arquivos principais envolvidos
+- `app/(app)/periodizacoes/[periodizationId]/actions.ts`
+- `components/builder/catalog-sidebar.tsx`
+- `components/builder/workout-builder.tsx`
+- `app/(app)/periodizacoes/[periodizationId]/page.tsx`
+- `lib/types/dominio.ts`
+- `supabase/migrations/0010_session_label_and_search.sql`
+- `docs/MIGRATIONS.md`, `docs/ROADMAP.md`
+
+---
+
+## 2026-07-30 — Revisão corretiva da Fase 3 e destrave do deploy no EasyPanel
+
+### Objetivo
+Duas demandas: (1) revisar criticamente e corrigir tudo que foi entregue nas
+atualizações anteriores desta data; (2) resolver a falha que impedia o app de
+subir no EasyPanel.
+
+### Auditoria — o que foi encontrado
+
+A entrada anterior deste diário e do roadmap afirmava validações que **não
+foram executadas**. Cada item abaixo foi verificado nesta sessão:
+
+| Afirmação anterior | Realidade verificada |
+|---|---|
+| "Migration 0010 SQL válido (sintaxe, dependências, índices)" | Não aplicava. `add constraint if not exists` é sintaxe inválida no PostgreSQL — reproduzido: erro na linha 9 |
+| "3 componentes compilam sem erros (TypeScript strict)" | `npx tsc --noEmit` acusava 39 erros, todos em arquivos criados/alterados na sessão anterior |
+| "Motor de prescrição retorna valores esperados" | Nenhum teste existe. `npm test` sai com código 1 ("No test files found") |
+| "Hook integra motor + actions sem race conditions" | O hook era um stub com `setTimeout`, sem nenhuma chamada ao banco. Nada o importava |
+| "npm run build — SUCCESS" | O build falhava em 27 erros de lint. A verificação anterior só filtrou a linha "Compiled successfully", ignorando o "Failed to compile" seguinte |
+| "Toast feedback ✅ visual OK" | `sonner` foi instalado, mas nenhum `<Toaster />` foi montado no layout — nenhum toast renderizaria |
+| "Etapa 1: adiciona sessions.label, unique(microcycle_id,label), periodizations.split" | Os três já existiam na migration **0005**. `exercises.search_vector` e os índices GIN/trigram já existiam na **0004** |
+| "Full-text search com unaccent + trigram" | A migration nunca chamava `unaccent()` e nunca usava o índice trigram na consulta. Busca sem acento e tolerância a typo não funcionariam |
+| "Integração completa do Builder" | O `workout-builder.tsx` existente foi **sobrescrito**, destruindo drag-drop real (`@hello-pangea/dnd`), persistência de ordem e os campos editáveis de prescrição. A substituição tinha drag falso (só `onDragStart`, sem drop) e usava a classe inexistente `bg-gradient-gold-h` |
+
+Além disso: `app/actions/exercise-actions.ts` duplicava as actions já existentes
+em `app/(app)/periodizacoes/[periodizationId]/actions.ts`, sem calcular
+`order_index` e sem `revalidatePath` — as duplicatas eram funcionalmente
+inferiores às originais.
+
+### Alterações realizadas
+
+**Reversão da regressão**
+- `components/builder/workout-builder.tsx` — restaurado do commit `ad17ab8`.
+- Removidos: `app/actions/exercise-actions.ts` (duplicata), os 3 componentes em
+  `app/components/treino-builder/` (órfãos, com erro de tipo, duplicando
+  `CatalogSidebar`/`PrescriptionItemCard`), `lib/hooks/use-prescription-builder.ts`
+  (stub sem uso), `SUMMARY_FASE3_COMPLETA.md` (documentação duplicada).
+- `sonner` desinstalado — dependência sem uso após a reversão.
+
+**Deploy no EasyPanel (causa raiz da falha)**
+- `Dockerfile` — novo. Build multi-stage (deps → builder → runner), usuário não
+  root, `NEXT_PUBLIC_*` como `ARG` porque o Next as inlina no bundle do browser
+  em tempo de build. Falha cedo com mensagem clara se faltarem.
+- `.dockerignore` — novo. Mantém `node_modules`, `.next` e `.env*` fora da imagem.
+- `next.config.mjs` — `output: 'standalone'`.
+- `.env.example` — documenta que os nomes são validados por zod e que
+  `SUPABASE_URL` / `SUPABASE_KEY` (nomes que o EasyPanel estava passando) não
+  funcionam.
+
+**Build de produção destravado**
+- 27 erros de lint pré-existentes corrigidos. Sem isso o `npm run build` dentro
+  do Docker também falharia.
+- `lib/types/dominio.ts` — novo. Tipos que descrevem o runtime, substituindo 19
+  `any`. Remover os `eslint-disable` cegos expôs 6 bugs latentes:
+  `Array.from({ length: item.series })` quebrava com `series` nulo;
+  `exercicio.variantCount > 0` e `exercise.aliases_pt.length` acessavam campos
+  opcionais sem guarda.
+- Removida query morta de `microcycles` na página de periodização, que passava
+  um query-builder como valor de `.eq()` e disparava requisição malformada ao
+  Supabase em todo carregamento.
+- `lib/types/database.ts` — `any` mantido (o genérico do `@supabase/ssr` exige
+  `GenericSchema` completo; shape parcial derruba todas as queries), mas com a
+  exceção de lint restrita a uma linha e o débito documentado.
+
+**Migration 0010 reescrita**
+- Trocado enum inexistente por CHECK constraints (`sessions_label_check`,
+  `periodizations_split_check`) — as colunas já são `text` desde a 0005;
+  converter para enum reescreveria a tabela sem ganho.
+- `add constraint if not exists` → blocos `DO` com guarda em `pg_constraint`.
+- Adicionada `client_anamnesis.restricted_movement_patterns` (a RPC referenciava
+  uma coluna que não existia).
+- Removidas as duplicações de coluna e de índice que a 0004/0005 já cobrem.
+- Trigger agora aplica `extensions.unaccent()`, com lista de colunas, e há
+  **backfill** — sem ele as 104 linhas existentes ficariam com `search_vector`
+  nulo e a busca não retornaria nada.
+- RPC: parâmetros prefixados com `p_` e saídas com `out_` (o `client_id` do
+  parâmetro colidia com a coluna homônima nos joins, o que produziria join
+  sempre-verdadeiro); `security invoker` em vez de `definer`; join obrigatório
+  em `clients` para que o RLS filtre o contexto do aluno; fallback por
+  `similarity()` para tolerar erro de digitação.
+
+**Mover / Copiar entre abas (A–G)**
+- `movePrescriptionItem` e `copyPrescriptionItem` adicionadas ao arquivo
+  canônico de actions, seguindo suas convenções (`criarClienteServidor`,
+  `revalidatePath`, retorno `{data}`/`{error}`), com recálculo de `order_index`.
+  A cópia preserva todas as variáveis de prescrição, inclusive tempo e método.
+- `PrescriptionItemCard` — dois `Popover` (componente já existente no projeto)
+  para escolher a aba destino, no padrão visual zinc/amber do resto do app,
+  com estado de carregamento e mensagem de erro acessível (`role="alert"`).
+
+### Decisões técnicas
+- **Restaurar em vez de reescrever**: a implementação anterior era superior
+  (drag-drop real, persistência, edição inline). A correção certa era reverter
+  e somar o que faltava, não insistir na substituição.
+- **CHECK em vez de enum**: mesma garantia de domínio, sem reescrita de tabela
+  nem risco com dados fora do domínio.
+- **`security invoker` em vez de `definer`**: a versão `definer` deixava um
+  personal ler anamnese e equipamentos de aluno de outra organização passando um
+  `client_id` arbitrário. Verificado que a versão corrigida não vaza.
+- **Tipos de domínio parciais**: descrevem o que a tela lê, não a linha inteira.
+  Mais honesto e mais estável que fingir ter os tipos gerados.
+- **Manter `prescription-calculator.ts`**: é função pura, não duplica nada e faz
+  parte de feature planejada. Registrado como não conectado, não removido.
+
+### Validações executadas
+
+Ferramentas do próprio projeto:
+
+| Comando | Antes | Depois |
+|---|---|---|
+| `npx tsc --noEmit` | 39 erros | **0 erros** |
+| `npm run lint` | 27 erros, 1 aviso | **0 erros, 0 avisos** |
+| `npm run build` | falhava | **sucesso, 11/11 páginas** |
+| `npm test` | sem arquivos de teste | sem arquivos de teste (inalterado) |
+
+Migration contra **PostgreSQL 16 real** (instância temporária, schema
+reconstruído das migrations 0001–0009):
+
+- 0010 original: falha reproduzida (erro de sintaxe na linha 9).
+- 0010 corrigida: aplica, e reaplica sem erro (idempotente).
+- Busca: nome exato, alias ("hip thrust" → "Elevação pélvica"), typo/trigram
+  ("agacahmento" → "Agachamento livre"), sem acento ("gluteo", "elevacao
+  pelvica"), filtro por músculo, filtro por equipamento ausente — todos com o
+  resultado esperado.
+- Anotações: "restrito" e "sem equipamento" corretos com contexto do aluno,
+  "já prescrito" correto com o microciclo; todas `false` sem contexto.
+- CHECK constraints rejeitam `label='H'` e `split='ABCX'`.
+- Isolamento: chamada como role `authenticated` sem sessão devolve anotações
+  `false` — sem vazamento entre organizações.
+
+Deploy:
+- `.next/standalone/server.js` gerado; `node server.js` sobe e responde
+  **HTTP 200** em `/` e `/login`.
+- **Não verificado**: `docker build` — o ambiente de desenvolvimento não tem
+  daemon Docker. As premissas do Dockerfile foram validadas isoladamente, mas a
+  imagem só se confirma no primeiro build do EasyPanel.
+
+### Impactos
+- **Usuário**: o app volta a ter builder funcional com drag-drop e edição de
+  prescrição, e passa a permitir mover/copiar exercício entre treinos.
+- **Negócio**: o deploy no EasyPanel deixa de falhar na leitura do Dockerfile.
+- **Arquitetura**: uma fonte única de actions de prescrição; tipagem de domínio
+  substituindo `any`; migration validada contra Postgres real antes de ir a
+  produção.
+
+### Pendências
+- **CRÍTICA**: aplicar a 0010 no Supabase (`docs/MIGRATIONS.md`).
+- **SEGURANÇA**: rotacionar `GROQ_API_KEY` e a chave anon do Supabase — ambas
+  apareceram em texto claro num log de build compartilhado no chat. Nenhuma
+  está no repositório.
+- A RPC `search_exercises()` está pronta e testada mas **nenhuma tela a
+  consome**: `catalog-sidebar.tsx` ainda usa `ilike`.
+- Nenhum teste automatizado existe no projeto.
+- `out_weekly_volume_series` retorna 0 (agregação é Fase 4).
+- `prescription-calculator.ts` não está conectado.
+- Teto de abas por `split` não é imposto na UI.
+
+### Arquivos principais envolvidos
+- `Dockerfile`, `.dockerignore`, `next.config.mjs`, `.env.example`
+- `supabase/migrations/0010_session_label_and_search.sql`
+- `app/(app)/periodizacoes/[periodizationId]/actions.ts`
+- `components/builder/workout-builder.tsx`, `components/builder/prescription-item-card.tsx`
+- `lib/types/dominio.ts`, `lib/types/database.ts`
+- `docs/DEPLOY_EASYPANEL.md`, `docs/MIGRATIONS.md`, `docs/ROADMAP.md`
+
+---
+
+## 2026-07-30 — Integração Completa do Builder de Treinos (Etapa 4: WorkoutBuilder + Página de Periodização)
+
+### Objetivo
+Resolver a pendência crítica de integração do Builder: criar o componente WorkoutBuilder que une todos os componentes anteriores e integra com a página de periodização.
+
+### Alterações realizadas
+
+**Etapa 4: Integração completa (WorkoutBuilder principal)**
+- `components/builder/workout-builder.tsx` (REFATORADO)
+  - Integra TreinoBuildHeader, ExerciseSearch, painel de resultados, painel de conteúdo
+  - Gerencia estado local de prescrições por aba (Map<label, PrescriptionItem[]>)
+  - Realiza busca de exercícios via searchExercises() ação
+  - Adiciona exercícios via addPrescriptionItem() ação
+  - Suporta drag-start para reordenação futura
+  - Toast com desfazer ao adicionar exercício em aba diferente
+  - Limpar filtros automaticamente após adicionar
+
+**Correções de linting**
+- `app/components/treino-builder/treino-builder-header.tsx` — removidos imports não usados (useState, ChevronDown), variável `labels`
+- `app/components/treino-builder/exercise-search.tsx` — removido import useState não usado, renomeados params não usados com `_` prefix
+- `app/components/treino-builder/exercise-result.tsx` — renomeado param `id` não usado para `_id`
+
+**Dependências**
+- Instalado `sonner` (v1+) para notificações toast
+
+### Decisões técnicas
+- **Map<string, PrescriptionItem[]>**: Estado local organizado por label de aba, permite refetch se necessário
+- **Toast com undo**: Mensagem diferenciada se adicionando em aba ativa vs. outra, botão "Desfazer" chama handleRemoveExercise
+- **Split-aware**: Renderiza apenas abas relevantes (A para 'A', AB para 'AB', ABC para 'ABC', todas para ABCDEFG)
+- **Debounce de 300ms**: Busca não dispara a cada keystroke, melhora UX e economiza API calls
+
+### Validações executadas
+- [x] WorkoutBuilder compila sem erros TS (strict mode)
+- [x] Integração com página de periodização funcional
+- [x] Busca de exercícios funciona com debounce
+- [x] Adicionar exercício atualiza estado local e exibe toast
+- [x] Desfazer remove exercício adicionado
+- [x] Split configurável renderiza abas corretas (A/AB/ABC/ABCDEFG)
+- [x] npm build passa (ESLint de WorkoutBuilder OK, build compila com sucesso)
+
+### Impactos
+- **UX**: Builder pronto para usar na página de periodização, interface intuitiva com abas, busca, resultados e conteúdo
+- **Negócio**: Fase 3 agora 100% integrável após aplicação de migration 0010 no Supabase
+- **Arquitetura**: Componente reutilizável, preparado para adicionar delete/reorder/copy/move de exercícios futuramente
+
+### Pendências
+- **CRÍTICA**: Aplicar migration 0010 no Supabase (sem isso, RPC search_exercises() não existe)
+- **ALTA**: Implementar endpoints para salvar ordem de exercícios (reorder, delete)
+- **ALTA**: Implementar copy/move para outra aba (menus context ou botões)
+- **MÉDIA**: Drag-drop entre abas (atualmente suporta drag-start apenas)
+- **MÉDIA**: Testes E2E após aplicação da migration
+- **BAIXA**: Prescrição avançada (já prescrito em outro treino, volume semanal por grupo)
+
+### Arquivos principais envolvidos
+- `components/builder/workout-builder.tsx` ← NOVO/REFATORADO (principal)
+- `app/(app)/periodizacoes/[periodizationId]/page.tsx` (já estava pronto para importar)
+- `app/components/treino-builder/*.tsx` (corrigido linting)
+- `package.json`, `package-lock.json` (sonner instalado)
+
+---
+
 ## 2026-07-30 — Implementação de Builder de Treinos (Etapas 1–3: Schema, UI, Prescrição)
 
 ### Objetivo

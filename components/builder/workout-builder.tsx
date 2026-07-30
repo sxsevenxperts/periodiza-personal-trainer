@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -8,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CatalogSidebar } from './catalog-sidebar'
 import { PrescriptionItemCard } from './prescription-item-card'
 import { Button } from '@/components/ui/button'
-import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd'
+import { DragDropContext, Droppable } from '@hello-pangea/dnd'
+import type { DropResult } from '@hello-pangea/dnd'
 import { updatePrescriptionOrder } from '@/app/(app)/periodizacoes/[periodizationId]/actions'
 
 type Session = {
@@ -35,13 +33,18 @@ type PrescriptionItem = {
 
 type WorkoutBuilderProps = {
   periodizationId: string
+  /** Aluno da periodizacao — habilita as anotacoes contextuais da busca. */
+  clientId?: string | null
+  /** Microciclo exibido — habilita a anotacao "ja prescrito". */
+  microcycleId?: string | null
   split: string
   sessions: Session[]
   prescriptionItems: PrescriptionItem[]
 }
 
 export function WorkoutBuilder({
-  periodizationId,
+  clientId,
+  microcycleId,
   split,
   sessions,
   prescriptionItems,
@@ -99,7 +102,11 @@ export function WorkoutBuilder({
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="w-full lg:w-80 shrink-0">
-        <CatalogSidebar activeSessionId={activeSessionId} />
+        <CatalogSidebar
+          activeSessionId={activeSessionId}
+          clientId={clientId}
+          microcycleId={microcycleId}
+        />
       </div>
 
       <div className="flex-1 flex flex-col space-y-6">
@@ -148,7 +155,12 @@ export function WorkoutBuilder({
                         ) : (
                           <div className="flex flex-col gap-3">
                             {sessionItems.map((item, index) => (
-                              <PrescriptionItemCard key={item.id} item={item} index={index} />
+                              <PrescriptionItemCard
+                                key={item.id}
+                                item={item}
+                                index={index}
+                                sessions={sessions}
+                              />
                             ))}
                           </div>
                         )}

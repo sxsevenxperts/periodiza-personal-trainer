@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
-import { Check, CheckCircle2, Circle, Loader2, Play, Timer, Video } from 'lucide-react'
+import { Check, CheckCircle2, Loader2, Video } from 'lucide-react'
 import { finishSession } from './actions'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { ItemExecucao, SessaoExecucao } from '@/lib/types/dominio'
 
 interface TreinoExecutionClientProps {
-  session: any
+  session: SessaoExecucao
   periodizationId: string
   sessionId: string
 }
@@ -22,7 +23,7 @@ export function TreinoExecutionClient({ session, periodizationId, sessionId }: T
   // Initialize sets tracking
   if (Object.keys(completedSets).length === 0 && items.length > 0) {
     const initial: Record<string, boolean[]> = {}
-    items.forEach((item: any) => {
+    items.forEach((item: ItemExecucao) => {
       initial[item.id] = Array(item.series || 3).fill(false)
     })
     setCompletedSets(initial)
@@ -50,7 +51,7 @@ export function TreinoExecutionClient({ session, periodizationId, sessionId }: T
   return (
     <div className="flex flex-col gap-6">
       <div className="flex overflow-x-auto gap-2 pb-2 snap-x scrollbar-none -mx-4 px-4">
-        {items.map((item: any, idx: number) => (
+        {items.map((item: ItemExecucao, idx: number) => (
           <button
             key={item.id}
             onClick={() => setActiveItem(idx)}
@@ -66,7 +67,7 @@ export function TreinoExecutionClient({ session, periodizationId, sessionId }: T
       </div>
 
       <div className="flex flex-col gap-6">
-        {items.map((item: any, idx: number) => (
+        {items.map((item: ItemExecucao, idx: number) => (
           <div key={item.id} className={`${activeItem === idx ? 'block' : 'hidden'} animate-in fade-in slide-in-from-right-4 duration-300`}>
             
             <div className="mb-6 border-b border-zinc-800 pb-4">
@@ -109,7 +110,7 @@ export function TreinoExecutionClient({ session, periodizationId, sessionId }: T
               <h3 className="font-semibold text-zinc-300">Registrar Séries</h3>
               
               <div className="flex flex-col gap-3">
-                {Array.from({ length: item.series }).map((_, setIdx) => {
+                {Array.from({ length: item.series ?? 3 }).map((_, setIdx) => {
                   const isCompleted = completedSets[item.id]?.[setIdx] || false;
                   
                   return (

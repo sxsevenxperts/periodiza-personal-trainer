@@ -3,6 +3,7 @@ import { CabecalhoPagina } from '@/components/layout/cabecalho-pagina'
 import { getCatalogoMetadata, getExercises } from './actions'
 import { FiltrosCatalogo } from '@/components/catalogo/filtros-catalogo'
 import { ExercicioCard } from '@/components/catalogo/exercicio-card'
+import type { ExercicioCatalogo } from '@/lib/types/dominio'
 
 export const metadata: Metadata = {
   title: 'Catálogo',
@@ -49,7 +50,10 @@ export default async function PaginaCatalogo({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {exercises.map((ex: any) => (
+            {/* Cast na fronteira: o parser de tipos do Supabase infere relacoes
+                to-one (movement_patterns, muscles, body_regions) como array, mas em
+                runtime elas vem como objeto. ExercicioCatalogo descreve o runtime. */}
+            {(exercises as unknown as ExercicioCatalogo[]).map((ex) => (
               <ExercicioCard key={ex.id} exercicio={ex} />
             ))}
           </div>

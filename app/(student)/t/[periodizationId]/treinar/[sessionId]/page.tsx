@@ -3,6 +3,7 @@ import { getSessionExecutionData } from './actions'
 import { TreinoExecutionClient } from './treino-execution-client'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import type { SessaoExecucao } from '@/lib/types/dominio'
 
 interface PageProps {
   params: Promise<{ periodizationId: string; sessionId: string }>
@@ -47,8 +48,10 @@ export default async function TreinoPage({ params }: PageProps) {
             </Link>
           </div>
         ) : (
+          /* Cast na fronteira: ver nota em app/(app)/catalogo/page.tsx —
+             prescription_items.exercises e objeto em runtime, nao array. */
           <TreinoExecutionClient 
-            session={session} 
+            session={session as unknown as SessaoExecucao} 
             periodizationId={periodizationId}
             sessionId={sessionId}
           />

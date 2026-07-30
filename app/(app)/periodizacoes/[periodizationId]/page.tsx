@@ -24,7 +24,7 @@ export default async function PaginaPeriodizacao({
   // 1. Load the periodization and its split
   const { data: periodization } = await supabase
     .from('periodizations')
-    .select('id, name, split, status')
+    .select('id, name, split, status, client_id')
     .eq('id', periodizationId)
     .single()
 
@@ -32,15 +32,7 @@ export default async function PaginaPeriodizacao({
     redirect('/dashboard') // Handle 404 or redirect appropriately
   }
 
-  // 2. Load the microcycle (assuming the current one or we just load sessions for now).
-  // For MVP, we load the first microcycle of this periodization.
-  const { data: microcycles } = await supabase
-    .from('microcycles')
-    .select('id, week_number')
-    .eq('mesocycle_id', (
-      supabase.from('mesocycles').select('id').eq('periodization_id', periodizationId) as any // Simplification for MVP, ideal is a join
-    ))
-  // Wait, Supabase allows joins:
+  // 2. Carrega o primeiro microciclo da periodizacao (MVP: uma semana por vez).
   const { data: currentMicrocycle } = await supabase
     .from('microcycles')
     .select(`
@@ -95,6 +87,8 @@ export default async function PaginaPeriodizacao({
       <div className="mt-6">
         <WorkoutBuilder 
           periodizationId={periodization.id}
+          clientId={periodization.client_id}
+          microcycleId={currentMicrocycle.id}
           split={periodization.split || 'ABC'}
           sessions={sessions || []}
           prescriptionItems={prescriptionItems || []}

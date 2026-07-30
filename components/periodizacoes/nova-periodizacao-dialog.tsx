@@ -23,8 +23,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { createPeriodization } from '@/app/(app)/periodizacoes/actions'
+import type { AlunoOpcao } from '@/lib/types/dominio'
 
-export function NovaPeriodizacaoDialog({ alunos }: { alunos: any[] }) {
+export function NovaPeriodizacaoDialog({ alunos }: { alunos: AlunoOpcao[] }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)

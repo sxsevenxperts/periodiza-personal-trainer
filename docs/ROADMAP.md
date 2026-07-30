@@ -1,29 +1,51 @@
 # Roadmap — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
-## Atualização — 2026-07-30
+## Atualização — 2026-07-30 (revisão corretiva + destrave do deploy)
 
-### Concluído
-- [x] Módulo de Avaliações Físicas criado (schema `client_assessments`, actions `getAssessments` e `createAssessment`).
-- [x] Aba de avaliações do Aluno integrada no front-end (`/alunos/[clientId]/page.tsx`).
-- [x] Correção integral dos conflitos de tipagem estrita gerados pelo `@supabase/ssr` via tipagem exata e `index signature` de fallback.
-- [x] Correção de componentes UI do shadcn incompatíveis com `asChild`.
-- [x] **ETAPA 1 — Patch ao schema**: Migration 0010 com session.label (A-G), periodizations.split, full-text search (tsvector + unaccent + trigram), RPC search_exercises() com filtros contextuais.
-- [x] **ETAPA 2 — Components React**: TreinoBuildHeader (abas), ExerciseSearch (barra + filtros), ExerciseResult (anotações contextuais). Seletor "Adicionar em:" com sticky behavior.
-- [x] **ETAPA 3 — Lógica de prescrição**: Actions (search, add, get), Motor de cálculo automático (séries/reps/carga/RIR/RPE por objetivo+fase+volume), Hook usePrescriptionBuilder.
+Esta entrada **corrige** uma atualização anterior da mesma data, que registrava
+como concluído e validado trabalho que não estava. A auditoria item a item está
+em `DIARIO_DE_BORDO.md`.
+
+### Concluído (verificado)
+- [x] Módulo de Avaliações Físicas (schema `client_assessments`, actions `getAssessments` / `createAssessment`).
+- [x] Aba de avaliações do Aluno em `/alunos/[clientId]`.
+- [x] **Deploy no EasyPanel destravado**: `Dockerfile` multi-stage + `.dockerignore` + `output: 'standalone'`. O build falhava porque o repositório não tinha Dockerfile. Ver `docs/DEPLOY_EASYPANEL.md`.
+- [x] **Build de produção passa**: 27 erros de lint pré-existentes corrigidos. `npm run lint`, `npx tsc --noEmit` e `npm run build` limpos — antes o build falhava, o que também quebraria o build Docker do EasyPanel.
+- [x] **Tipagem de domínio real** (`lib/types/dominio.ts`): substitui 19 `any` por tipos que descrevem o runtime. Remover os `eslint-disable` cegos revelou 6 bugs latentes (ex.: `Array.from({ length: null })` quando `series` é nulo).
+- [x] **Migration 0010 corrigida e validada contra PostgreSQL 16 real**: a versão anterior não aplicava — erro de sintaxe em `add constraint if not exists`, tipos `session_label_enum` / `training_split_enum` inexistentes, coluna `restricted_movement_patterns` inexistente, `search_vector` sem backfill, trigram e unaccent nunca aplicados de fato. Matriz de testes em `docs/MIGRATIONS.md`.
+- [x] **Mover / Copiar exercício entre abas A–G**: `movePrescriptionItem` e `copyPrescriptionItem` no arquivo canônico de actions, com recálculo de `order_index` e `revalidatePath`; UI via Popover em `PrescriptionItemCard`.
+- [x] **Regressão revertida**: `components/builder/workout-builder.tsx` havia sido sobrescrito, perdendo drag-drop real (`@hello-pangea/dnd`), persistência de ordem e os campos editáveis de prescrição. Restaurado.
+- [x] **RPC `search_exercises` conectada à UI**: `catalog-sidebar.tsx` deixou de buscar com `ilike` e passou a usar a RPC, ganhando busca sem acento, tolerância a erro de digitação (trigram), busca por alias e as anotações contextuais (restrito / sem equipamento / já prescrito) renderizadas nos resultados. O contexto (`clientId`, `microcycleId`) desce da página → builder → sidebar.
+- [x] Assinatura da RPC corrigida antes de aplicar: `p_muscle` (texto, comparava por nome) → `p_muscle_id` (uuid). A UI sempre enviou o id do músculo; o filtro por nome nunca teria casado.
+- [x] Código morto removido: query malformada de `microcycles` que disparava requisição inválida ao Supabase em todo carregamento da página de periodização.
+
+### Já existia — registrado por engano como novo
+- Drag-drop e reordenação dentro da sessão, com persistência (`workout-builder.tsx` + `PrescriptionItemCard`).
+- Edição de séries/reps/carga/RIR/RPE/pausa com save debounced (`PrescriptionItemCard`).
+- `sessions.label`, unique `(microcycle_id, label)`, `periodizations.split` — migration **0005**.
+- `exercises.search_vector` e índices GIN/trigram — migration **0004**.
+- Extensões `unaccent` e `pg_trgm` — migration **0001**.
 
 ### Em andamento
-- [ ] Integração completa do Builder (listar sessões, salvar abas, ordem de exercícios).
-- [ ] Drag-drop entre abas e reordenação dentro de sessão.
-- [ ] Toast com desfazer ao adicionar exercício para aba diferente.
+- [ ] **CRÍTICO — aplicar a migration 0010 no Supabase.** Sem ela a RPC `search_exercises()` não existe. Passo a passo em `docs/MIGRATIONS.md`.
+- [ ] Impor o teto de abas conforme o `split` da periodização e bloquear a 8ª sessão (a UI hoje lista as sessões existentes, sem validar o limite).
+- [ ] **Remover o fallback de busca** em `searchExercises()` depois de aplicar a 0010. Hoje, se a RPC não existir, a busca cai em `ilike` para não derrubar a tela — comportamento degradado e temporário, sinalizado no log do servidor e (em dev) na própria sidebar.
 
 ### Próximos passos
-- [ ] Página de periodização que renderiza o Builder (conexão com microcycle/session/prescription).
-- [ ] Teste E2E: criar 7 treinos (A-G), 8ª bloqueado, buscar "hip thrust", arrastar entre abas.
-- [ ] Adicionar suporte a templates de periodização.
+- [ ] Suíte de testes automatizados. `vitest` está configurado mas **não existe nenhum arquivo de teste** (`npm test` sai com código 1).
+- [ ] Gerar os tipos do Supabase (`supabase gen types typescript`) e eliminar o `any` de `lib/types/database.ts`.
+- [ ] Conectar `lib/prescription-engine/prescription-calculator.ts` ao fluxo de adicionar exercício — hoje é código morto, nenhum import.
+- [ ] Agregação de volume semanal por grupo muscular (`out_weekly_volume_series` retorna 0).
+- [ ] UI de anamnese que preencha `client_anamnesis.restricted_movement_patterns` (Fase 4).
+- [ ] Suporte a templates de periodização.
 
 ### Riscos e débitos técnicos
-- **Risco mitigado**: O colapso na tipagem estrita do Supabase ameaçava atrasar as views; agora a arquitetura suporta o inferimento correto.
-- **Debt técnico**: Motor de prescrição é básico (não tem nuances de progressão semanal nem ajustes de RPE observado); OK para MVP.
+- **Segurança — credenciais expostas**: um log de build compartilhado no chat continha `GROQ_API_KEY` e a chave anon do Supabase em texto claro. **Rotacionar as duas.** Nenhuma está no repositório.
+- **Débito**: `lib/types/database.ts` segue `any`, com exceção de lint documentada e restrita a uma linha. Um shape parcial derruba o inferimento de todas as queries do `@supabase/ssr`; só os tipos gerados resolvem.
+- **Débito**: o parser de tipos do Supabase infere relações to-one como array; há dois casts documentados na fronteira de dados (`app/(app)/catalogo/page.tsx` e página de execução do aluno).
+- **Débito**: motor de prescrição é básico e não está conectado ao fluxo.
+- **Débito**: o fallback `ilike` na busca é código de transição. Enquanto existir, uma falha real da RPC (que não seja "função ausente") também degrada silenciosamente para a busca simples.
+- **Risco**: `docker build` não foi executado — o ambiente de desenvolvimento não tem daemon Docker. As premissas do Dockerfile foram validadas individualmente (saída standalone, caminhos de `COPY`, arranque com `node server.js`, HTTP 200 em `/` e `/login`), mas a construção da imagem só se confirma no primeiro build do EasyPanel.
 
 ---
 
