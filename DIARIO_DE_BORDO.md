@@ -1,5 +1,83 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Dockerfile aceita a nomenclatura do EasyPanel; guarda contra service_role
+
+### Objetivo
+O build passou a executar (o Dockerfile chegou a `main`), mas parou na guarda de
+variáveis: o EasyPanel publica `SUPABASE_URL` / `SUPABASE_KEY`, e o app espera
+`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Em vez de insistir
+na renomeação manual, o Dockerfile passou a aceitar os dois conjuntos.
+
+### Alterações realizadas
+
+**`Dockerfile` — estágio builder**
+- Novos `ARG SUPABASE_URL` e `ARG SUPABASE_KEY`, aceitos como alias. Os nomes
+  `NEXT_PUBLIC_*` têm precedência quando ambos vierem preenchidos.
+- A resolução saiu do `ENV` e foi para dentro de um `RUN`, gravando
+  `.env.production`, que o `next build` lê.
+- Guarda de segurança: decodifica o payload do JWT e aborta o build se a chave
+  informada for a `service_role`.
+- Mensagens de erro passaram a citar os dois nomes aceitos.
+
+**Documentação**
+- `docs/DEPLOY_EASYPANEL.md`: seção de variáveis reescrita com a tabela de
+  precedência, a guarda de segurança e a justificativa do `RUN`.
+- `docs/ROADMAP.md`: registra o comportamento novo e ajusta o item pendente do
+  build, que agora aguarda um build concluído em vez do primeiro disparo.
+
+### Decisões técnicas
+- **Aceitar alias em vez de exigir renomeação**: a configuração do EasyPanel já
+  publica esses nomes para os serviços do projeto. Pedir renomeação vinha
+  falhando repetidamente; adaptar o Dockerfile resolve sem depender disso.
+- **Resolver no `RUN`, não no `ENV`**: `ENV VAR=${OUTRA:-$TERCEIRA}` dependeria
+  da expansão aninhada do parser do Dockerfile, que eu não consigo testar neste
+  ambiente. Dentro do `RUN` é shell POSIX puro — testável e previsível.
+- **`.env.production` como veículo**: é o mecanismo padrão do Next para o build
+  de produção, e mantém o `npm run build` numa camada separada.
+- **Guarda de service_role**: o alias `SUPABASE_KEY` é genérico o bastante para
+  alguém apontar a chave errada. Como `NEXT_PUBLIC_*` pode ser inlinada no
+  bundle do browser, o custo do engano seria vazar o segredo para todos os
+  visitantes. Barato de checar, caro de errar.
+- **Comentários fora do corpo do `RUN`**: comentários indentados dentro de uma
+  continuação de linha têm comportamento incerto no parser; movidos para cima.
+
+### Validações executadas
+
+| Verificação | Resultado |
+|---|---|
+| script de resolução, 4 cenários | alias usado; `NEXT_PUBLIC_*` com precedência; ausência falha; service_role bloqueada |
+| `next build` lendo só `.env.production` | sucesso, 11/11 páginas, com as vars removidas do ambiente |
+| valor realmente inlinado | sentinela encontrada em `.next/server/middleware.js` e nos bundles de página |
+| `npx tsc --noEmit` | 0 erros |
+| `npm run lint` | 0 erros, 0 avisos |
+
+Observação factual: a sentinela apareceu nos bundles do **servidor**, não em
+`.next/static/`. Nenhum componente cliente usa `lib/supabase/client.ts` hoje,
+então a chave ainda não vai ao browser — mas iria assim que o primeiro usasse.
+A guarda de service_role se justifica por isso.
+
+**Não verificado:** `docker build` — sem daemon Docker no ambiente. A lógica de
+resolução foi testada isoladamente em `/bin/sh`, e a leitura do
+`.env.production` foi testada com o build real, mas a execução dentro da imagem
+só se confirma no EasyPanel.
+
+### Impactos
+- **Negócio**: o deploy deixa de depender de renomear variáveis no painel.
+- **Segurança**: um engano que exporia a service_role passa a quebrar o build em
+  vez de ir para produção silenciosamente.
+
+### Pendências
+- Build verde no EasyPanel — ainda não obtido.
+- Migration 0010 não aplicada no Supabase.
+- Rotacionar `GROQ_API_KEY` e a chave anon (exposição repetida nos logs).
+- Nenhum teste automatizado no projeto.
+
+### Arquivos principais envolvidos
+- `Dockerfile`
+- `docs/DEPLOY_EASYPANEL.md`, `docs/ROADMAP.md`
+
+---
+
 ## 2026-07-30 — Merge em main, auditoria da própria rodada e correção de 4 defeitos
 
 ### Objetivo
