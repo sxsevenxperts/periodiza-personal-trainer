@@ -65,6 +65,18 @@ curl -i "https://<URL-DO-KONG>/rest/v1/" -H "apikey: <chave-anon>"
 Se o Postgres (5432) não estiver exposto publicamente — que é o caso aqui — o
 SQL Editor do Studio passa a ser o caminho para aplicar a migration.
 
+### Confirmar a partir do container do app
+
+Depois que o app subir no EasyPanel, a sonda embutida responde a mesma pergunta
+de dentro da rede que importa (a do container, não a da sua máquina):
+
+```bash
+curl -s "https://<dominio-do-app>/api/health?deep=1" | jq .supabase
+```
+
+`{"ok": true, …}` significa que a URL configurada no build alcança o gateway.
+Qualquer outro resultado descreve o motivo. Detalhes em `docs/DEPLOY_EASYPANEL.md`.
+
 ---
 
 ## Aplicar a 0010

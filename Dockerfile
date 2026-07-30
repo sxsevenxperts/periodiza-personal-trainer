@@ -91,15 +91,28 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# tini como PID 1. O server.js do Next standalone nao instala handler de
+# SIGTERM; como PID 1 no Linux, um processo sem handler explicito ignora o
+# sinal. O resultado seria o EasyPanel esperar o timeout e mandar SIGKILL em
+# todo redeploy — derrubando requisicoes em voo. O tini repassa o sinal.
+RUN apk add --no-cache tini
+
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
 
 # O output standalone ja embute o server e as dependencias necessarias.
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 EXPOSE 3000
 
+# Liveness: nao toca o Supabase de proposito. Amarrar a saude do container a um
+# servico externo faria uma instabilidade do banco virar loop de restart.
+# Para checar o Supabase de dentro do container: GET /api/health?deep=1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "server.js"]

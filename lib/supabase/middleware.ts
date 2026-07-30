@@ -67,9 +67,19 @@ export async function atualizarSessao(request: NextRequest): Promise<NextRespons
 
   const {
     data: { user },
+    error: erroDeAuth,
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
+
+  // Falha de rede contra o Supabase nao lanca excecao: o @supabase/auth-js a
+  // converte em AuthRetryableFetchError e devolve `user: null`. O efeito e
+  // fail-closed (todo mundo vira deslogado), que e o comportamento seguro — mas
+  // sem este log a causa fica invisivel e o sintoma no painel e so "ninguem
+  // consegue entrar". Diagnostico completo: GET /api/health?deep=1
+  if (erroDeAuth) {
+    registrarFalhaDeAuth(erroDeAuth)
+  }
 
   if (!user && ehRotaProtegida(pathname)) {
     const destino = request.nextUrl.clone()
@@ -87,6 +97,32 @@ export async function atualizarSessao(request: NextRequest): Promise<NextRespons
   }
 
   return supabaseResponse
+}
+
+/**
+ * Erro esperado quando o visitante simplesmente nao esta logado. Nao e falha —
+ * registra-lo encheria o log a cada requisicao anonima.
+ */
+const AUTH_SEM_SESSAO = 'AuthSessionMissingError'
+
+/** Janela do amortecedor de log, para uma indisponibilidade nao inundar o log. */
+const INTERVALO_ENTRE_LOGS_MS = 30_000
+
+let ultimoLogDeAuth = 0
+
+function registrarFalhaDeAuth(erro: { name?: string; message?: string }): void {
+  if (erro.name === AUTH_SEM_SESSAO) return
+
+  const agora = Date.now()
+  if (agora - ultimoLogDeAuth < INTERVALO_ENTRE_LOGS_MS) return
+  ultimoLogDeAuth = agora
+
+  console.error(
+    `[auth] Supabase nao respondeu a verificacao de sessao (${erro.name ?? 'erro'}): ` +
+      `${erro.message ?? 'sem mensagem'}. ` +
+      'Enquanto isso todo acesso e tratado como deslogado. ' +
+      'Verifique NEXT_PUBLIC_SUPABASE_URL e se o gateway do Supabase esta no ar.',
+  )
 }
 
 type DestinoDeRedirect = Parameters<typeof NextResponse.redirect>[0]

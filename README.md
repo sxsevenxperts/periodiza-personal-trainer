@@ -127,6 +127,17 @@ como alias, que é o que o EasyPanel já publica.
 A chave precisa ser a **anon**: o build aborta se receber a service_role, que
 nunca pode ir para o bundle do browser.
 
+O container usa `tini` como PID 1 (para o `SIGTERM` do redeploy chegar ao Next) e
+expõe uma sonda de saúde:
+
+```bash
+curl -s http://localhost:3000/api/health          # liveness, não toca a rede
+curl -s http://localhost:3000/api/health?deep=1   # também sonda o Supabase
+```
+
+A sonda não devolve chave nenhuma — da URL sai só o host, e da chave só o
+comprimento e o papel declarado no JWT.
+
 Configuração no EasyPanel e diagnóstico de falhas: `docs/DEPLOY_EASYPANEL.md`.
 
 ---
@@ -144,6 +155,11 @@ Configuração no EasyPanel e diagnóstico de falhas: `docs/DEPLOY_EASYPANEL.md`
 │   │   ├── catalogo/
 │   │   ├── modelos/
 │   │   └── configuracoes/
+│   ├── (student)/t/[periodizationId]/         # visão do aluno, por link
+│   ├── api/health/route.ts      # sonda de saúde do container (fora do middleware)
+│   ├── error.tsx                # boundary de erro das rotas
+│   ├── global-error.tsx         # boundary do próprio layout raiz
+│   ├── not-found.tsx            # 404 em pt-BR
 │   ├── globals.css              # reset, CSS variables de tema, camada base
 │   ├── layout.tsx               # <html lang="pt-BR">, fonte, Providers
 │   └── page.tsx                 # landing; redireciona logado para /dashboard

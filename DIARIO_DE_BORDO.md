@@ -1,5 +1,155 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Blindagem de runtime para o EasyPanel
+
+### Objetivo
+Pedido: "corrija todo o código deixando-o pronto pra rodar no EasyPanel".
+
+### O que a auditoria encontrou
+
+Comecei verificando o que já estava certo, para não refazer trabalho:
+
+| Verificação | Resultado |
+|---|---|
+| `npx tsc --noEmit` | 0 erros |
+| `npm run lint` | 0 erros, 0 avisos |
+| `npm run build` | sucesso, 11/11 páginas |
+| `npm ci` a partir do lockfile | 506 pacotes, lockfile em dia |
+| `output: standalone` gera `server.js` | existe |
+
+Ou seja: **o código compila**. O que faltava não era compilação — era
+comportamento sob falha. Encontrei quatro lacunas, todas materiais para um
+container em produção.
+
+#### 1. Nenhum boundary de erro no app inteiro
+
+`find app -name "error.tsx" -o -name "global-error.tsx" -o -name "not-found.tsx"`
+não retornava nada. Qualquer exceção não tratada num Server Component viraria a
+tela padrão do Next — *"Application error: a server-side exception has
+occurred"* — em inglês, sem contexto e sem caminho de volta. Um 404 caía na
+mesma situação, numa aplicação declarada `<html lang="pt-BR">`.
+
+#### 2. Falha de auth era invisível no log
+
+Aqui eu errei a hipótese primeiro e corrigi lendo o código da dependência.
+
+**Hipótese inicial:** com o Supabase fora do ar, `supabase.auth.getUser()`
+lançaria no `middleware.ts` e **toda** requisição viraria 500.
+
+**O que o código mostra** (`node_modules/@supabase/auth-js/.../GoTrueClient.js`,
+`_getUser`): o `catch` só re-lança se `!isAuthError(error)`. E em
+`lib/fetch.js`, falha de rede vira `AuthRetryableFetchError` e corpo não-JSON
+vira `AuthUnknownError` — ambos descendem de `AuthError`. Logo `getUser()`
+**não lança**: devolve `user: null`.
+
+O efeito real é *fail-closed*, que é o comportamento seguro e não precisava de
+correção. O problema era outro: o `error` era descartado no destructuring, então
+o sintoma no painel seria apenas "ninguém consegue entrar", sem causa nenhuma no
+log.
+
+#### 3. `SIGTERM` ignorado em todo redeploy
+
+O `server.js` do Next standalone não instala handler de `SIGTERM`. Como PID 1 no
+Linux, um processo sem handler explícito **ignora** o sinal — o kernel não aplica
+a ação padrão ao PID 1. O EasyPanel esperaria o timeout e mandaria `SIGKILL`,
+derrubando requisições em voo a cada deploy.
+
+#### 4. Nenhuma forma de diagnosticar o container por dentro
+
+O bloqueio corrente do projeto é o Supabase inalcançável. Todo o diagnóstico até
+aqui foi feito com `curl` da máquina de desenvolvimento — mas a rede que decide é
+a **do container**: DNS, rota e proxy podem ser outros.
+
+### Alterações realizadas
+
+| Arquivo | Mudança |
+|---|---|
+| `app/api/health/route.ts` | **novo** — `GET /api/health` (liveness, não toca a rede) e `?deep=1` (sonda o gateway do Supabase) |
+| `app/error.tsx` | **novo** — boundary de rota, exibe o `digest` para correlacionar com o log |
+| `app/global-error.tsx` | **novo** — boundary do layout raiz, com estilo inline |
+| `app/not-found.tsx` | **novo** — 404 em pt-BR |
+| `lib/supabase/middleware.ts` | captura e registra o `error` de `getUser()`, amortecido |
+| `Dockerfile` | `tini` como PID 1, `HEALTHCHECK`, `--chown` no `COPY` do `public` |
+| `.env.example` | corrigida afirmação que contradizia o alias do Dockerfile |
+| `README.md`, `docs/DEPLOY_EASYPANEL.md`, `docs/MIGRATIONS.md` | documentação |
+
+#### Decisões que exigiram escolha
+
+**A sonda olha o `content-type`, não só o status.** Foi o que o diagnóstico de
+ontem ensinou: um domínio sem serviço vinculado no EasyPanel devolve HTTP 404
+com a página catch-all do proxy — em HTML. Checar só o status confundiria "não
+existe serviço" com "existe e recusou". Validei a lógica contra o domínio real:
+
+```
+Supabase do EasyPanel (real)  HTTP 404 content-type "text/html"  → não é JSON
+host inventado                HTTP 404 content-type "text/html"  → idêntico
+```
+
+**O `HEALTHCHECK` do Docker usa a sonda rasa, não a profunda.** Amarrar a saúde
+do container à disponibilidade do Supabase faria uma instabilidade do banco
+virar loop de restart — o container seria morto justamente quando o operador
+precisa que ele fique de pé para ser inspecionado.
+
+**A sonda não devolve segredo.** Da URL sai só o host; da chave, só o
+comprimento e o papel declarado no JWT (`anon` / `service_role`). Isso permite
+flagrar chave trocada — o erro que o Dockerfile já bloqueia no build — sem expor
+o valor.
+
+**O log de auth filtra `AuthSessionMissingError`.** É o erro devolvido em toda
+requisição anônima, ou seja, o caso normal. Sem o filtro, o log encheria com
+ruído e a falha real ficaria enterrada. Somado a um amortecedor de 30s, uma
+indisponibilidade prolongada gera uma linha por janela, não uma por requisição.
+
+### Verificação executada
+
+Subi o `server.js` do standalone — o mesmo binário que o container roda — com o
+Supabase deliberadamente inalcançável, e exercitei cada caminho:
+
+| Cenário | Esperado | Obtido |
+|---|---|---|
+| `GET /api/health` | 200, sem vazar chave | `200` `{"status":"ok",…,"papel":"anon","comprimento":85}` |
+| `GET /api/health?deep=1` | 503 com causa | `503` `nao foi possivel conectar: fetch failed` |
+| `GET /` (Supabase fora) | 200 | `200` |
+| `GET /login` (Supabase fora) | 200 | `200` |
+| `GET /rota-inexistente` | 404 em pt-BR | `404` "Página não encontrada" |
+| `GET /dashboard` sem sessão | redireciona | `307` → `/login?redirecionar=%2Fdashboard` |
+| requisição **anônima** | não polui o log | 0 linhas `[auth]` |
+| requisição **com cookie** de sessão | 1 linha com a causa | `[auth] …(AuthRetryableFetchError): fetch failed…` |
+| 4 falhas seguidas | amortecedor segura | 1 linha só |
+| sonda vs. domínio real do Supabase | detecta catch-all | detectado (HTML, não JSON) |
+
+Depois: `npx tsc --noEmit` e `npm run lint` limpos, `npm run build` verde com
+`/api/health` corretamente marcada como dinâmica (`ƒ`).
+
+### O que continua não verificado
+
+**`docker build` não foi executado** — não há daemon Docker neste ambiente. As
+peças foram validadas isoladamente (standalone sobe, caminhos de `COPY`, porta,
+`npm ci` a partir do lockfile), mas `tini` e o `HEALTHCHECK` só se confirmam na
+imagem real. `tini` está no repositório `main` do Alpine, então `apk add` deve
+resolver.
+
+**Risco de build descoberto e não corrigido:** `app/layout.tsx` usa `Inter` via
+`next/font/google`, que **baixa a fonte durante o build**. Se o builder do
+EasyPanel não alcançar `fonts.googleapis.com`, o `next build` falha. Não
+troquei por `next/font/local` porque exigiria versionar binário e o `npm ci` do
+mesmo build já prova que há saída para a internet — mas registrei a correção
+pronta em `docs/DEPLOY_EASYPANEL.md` caso apareça.
+
+**Débito que a auditoria expôs:** `/dashboard`, `/modelos` e `/configuracoes`
+são estáticas (`○` no build) porque são placeholders. O dashboard exibe números
+fixos — 12 alunos, 84% de aderência — que não vêm do banco. Registrado no
+roadmap; não é bloqueio de deploy, mas não pode ir para uso real assim.
+
+### O bloqueio de fato não mudou
+
+Nada aqui destrava o Supabase. Ele continua sem serviço publicado no domínio
+conhecido, e a migration 0010 continua pendente. O que mudou é que, assim que o
+container subir, `GET /api/health?deep=1` responde a pergunta de dentro da rede
+certa, em vez de por inferência.
+
+---
+
 ## 2026-07-30 — Correção do diagnóstico: não há serviço publicado no domínio do Supabase
 
 ### Objetivo
