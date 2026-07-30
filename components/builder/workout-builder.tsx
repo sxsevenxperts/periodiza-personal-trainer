@@ -1,10 +1,16 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { GripVertical, X } from 'lucide-react'
+import { GripVertical, X, Copy, Move } from 'lucide-react'
 import { TreinoBuildHeader, type SessionTab } from '@/app/components/treino-builder/treino-builder-header'
 import { ExerciseSearch, type ExerciseFilter } from '@/app/components/treino-builder/exercise-search'
-import { searchExercises, addPrescriptionItem } from '@/app/actions/exercise-actions'
+import {
+  searchExercises,
+  addPrescriptionItem,
+  deletePrescriptionItem,
+  movePrescriptionItem,
+  copyPrescriptionItem,
+} from '@/app/actions/exercise-actions'
 import { toast } from 'sonner'
 
 interface Exercise {
@@ -64,6 +70,7 @@ export function WorkoutBuilder({
     sessionLabel: string
     itemId: string
   } | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
   // Get session tabs for header
   const sessionTabs: SessionTab[] = initialSessions
@@ -119,8 +126,78 @@ export function WorkoutBuilder({
       )
       return updated
     })
+
+    // Call server action to delete from DB
+    deletePrescriptionItem(itemId).catch((error) => {
+      console.error('Delete error:', error)
+      toast.error('Erro ao deletar exercício')
+    })
+
     toast.success('Exercício removido')
   }, [])
+
+  // Handle move exercise to another session
+  const handleMoveExercise = useCallback(
+    (fromLabel: string, itemId: string, toLabel: string) => {
+      if (fromLabel === toLabel) return
+
+      setPrescriptionItems((prev) => {
+        const updated = new Map(prev)
+        const fromItems = updated.get(fromLabel) || []
+        const toItems = updated.get(toLabel) || []
+
+        const itemToMove = fromItems.find((item) => item.id === itemId)
+        if (!itemToMove) return prev
+
+        updated.set(
+          fromLabel,
+          fromItems.filter((item) => item.id !== itemId)
+        )
+        updated.set(toLabel, [...toItems, itemToMove])
+
+        return updated
+      })
+
+      // Get target session ID
+      const targetSession = initialSessions.find((s) => s.label === toLabel)
+      if (targetSession) {
+        movePrescriptionItem(itemId, targetSession.id).catch((error) => {
+          console.error('Move error:', error)
+          toast.error('Erro ao mover exercício')
+        })
+      }
+
+      toast.success(`Exercício movido para Treino ${toLabel}`)
+    },
+    [initialSessions]
+  )
+
+  // Handle copy exercise to another session
+  const handleCopyExercise = useCallback(
+    (fromLabel: string, itemId: string, toLabel: string) => {
+      const targetSession = initialSessions.find((s) => s.label === toLabel)
+      if (!targetSession) return
+
+      // Call server action to copy
+      copyPrescriptionItem(itemId, targetSession.id)
+        .then((newItem) => {
+          if (newItem && Array.isArray(newItem) && newItem.length > 0) {
+            setPrescriptionItems((prev) => {
+              const updated = new Map(prev)
+              const toItems = updated.get(toLabel) || []
+              updated.set(toLabel, [...toItems, newItem[0]])
+              return updated
+            })
+            toast.success(`Exercício copiado para Treino ${toLabel}`)
+          }
+        })
+        .catch((error) => {
+          console.error('Copy error:', error)
+          toast.error('Erro ao copiar exercício')
+        })
+    },
+    [initialSessions]
+  )
 
   // Handle add exercise
   const handleAddExercise = useCallback(
@@ -227,18 +304,25 @@ export function WorkoutBuilder({
   return (
     <div className="flex flex-col h-screen bg-neutral-950 rounded-lg overflow-hidden border border-neutral-800">
       {/* Header with tabs */}
-      <TreinoBuildHeader
-        sessions={sessionTabs}
-        onTabChange={(label) => setActiveSessionLabel(label)}
-        onAddSession={() => {
-          // If we reach max sessions, show error
-          if (sessionTabs.length >= maxSessions) {
-            toast.error(`Máximo de ${maxSessions} treino(s) para essa divisão`)
-          }
+      <div
+        onDragOver={(e) => {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
         }}
-        split={split}
-        canAddMore={sessionTabs.length < maxSessions}
-      />
+      >
+        <TreinoBuildHeader
+          sessions={sessionTabs}
+          onTabChange={(label) => setActiveSessionLabel(label)}
+          onAddSession={() => {
+            // If we reach max sessions, show error
+            if (sessionTabs.length >= maxSessions) {
+              toast.error(`Máximo de ${maxSessions} treino(s) para essa divisão`)
+            }
+          }}
+          split={split}
+          canAddMore={sessionTabs.length < maxSessions}
+        />
+      </div>
 
       {/* Search bar */}
       <ExerciseSearch
@@ -350,7 +434,66 @@ export function WorkoutBuilder({
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative">
+                      {/* Copy dropdown */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === `copy-${item.id}` ? null : `copy-${item.id}`)}
+                          className="p-1 hover:bg-neutral-600 rounded text-neutral-400 hover:text-neutral-200"
+                          title="Copiar para outra aba"
+                        >
+                          <Copy size={16} />
+                        </button>
+                        {openMenuId === `copy-${item.id}` && (
+                          <div className="absolute right-0 top-full mt-1 bg-neutral-800 border border-neutral-700 rounded-md shadow-lg z-50 min-w-[120px]">
+                            {sessionTabs
+                              .filter((s) => s.label !== activeSessionLabel)
+                              .map((session) => (
+                                <button
+                                  key={`copy-${session.label}`}
+                                  onClick={() => {
+                                    handleCopyExercise(activeSessionLabel, item.id, session.label)
+                                    setOpenMenuId(null)
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-xs hover:bg-neutral-700 text-neutral-300"
+                                >
+                                  Treino {session.label}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Move dropdown */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === `move-${item.id}` ? null : `move-${item.id}`)}
+                          className="p-1 hover:bg-neutral-600 rounded text-neutral-400 hover:text-neutral-200"
+                          title="Mover para outra aba"
+                        >
+                          <Move size={16} />
+                        </button>
+                        {openMenuId === `move-${item.id}` && (
+                          <div className="absolute right-0 top-full mt-1 bg-neutral-800 border border-neutral-700 rounded-md shadow-lg z-50 min-w-[120px]">
+                            {sessionTabs
+                              .filter((s) => s.label !== activeSessionLabel)
+                              .map((session) => (
+                                <button
+                                  key={`move-${session.label}`}
+                                  onClick={() => {
+                                    handleMoveExercise(activeSessionLabel, item.id, session.label)
+                                    setOpenMenuId(null)
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-xs hover:bg-neutral-700 text-neutral-300"
+                                >
+                                  Treino {session.label}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Delete button */}
                       <button
                         onClick={() => handleRemoveExercise(activeSessionLabel, item.id)}
                         className="p-1 hover:bg-red-500/20 rounded text-neutral-400 hover:text-red-400"
