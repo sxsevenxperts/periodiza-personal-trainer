@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { ChevronDown, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 export interface SessionTab {
   label: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'
@@ -25,8 +24,6 @@ export function TreinoBuildHeader({
   split,
   canAddMore,
 }: TreinoBuildHeaderProps) {
-  const labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
-
   return (
     <div className="border-b border-neutral-800 bg-neutral-900 px-4 py-3">
       <div className="flex items-center gap-1 mb-2">

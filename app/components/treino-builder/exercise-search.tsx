@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Search, X } from 'lucide-react'
 
 export interface ExerciseFilter {
@@ -25,10 +24,10 @@ interface ExerciseSearchProps {
 export function ExerciseSearch({
   filters,
   onFilterChange,
-  categories,
-  movements,
-  muscles,
-  equipments,
+  _categories,
+  _movements,
+  _muscles,
+  _equipments,
 }: ExerciseSearchProps) {
   const handleQueryChange = (query: string) => {
     onFilterChange({ ...filters, query })

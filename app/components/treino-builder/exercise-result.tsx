@@ -18,7 +18,7 @@ interface ExerciseResultProps {
 }
 
 export function ExerciseResult({
-  id,
+  _id,
   namePt,
   nameEn,
   primaryMuscle,
