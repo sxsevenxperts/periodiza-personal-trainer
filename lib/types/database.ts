@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /**
  * PLACEHOLDER — este arquivo sera SUBSTITUIDO integralmente pelos tipos gerados
  * a partir do schema real do Supabase. Nao edite a mao depois da geracao.
@@ -27,10 +30,49 @@ type LinhaGenerica = Record<string, Json>
 export interface Database {
   public: {
     Tables: {
-      [tabela: string]: {
-        Row: LinhaGenerica
-        Insert: LinhaGenerica
-        Update: LinhaGenerica
+      periodizations: {
+        Row: { id: string, name: string, split: string, status: string }
+        Insert: any
+        Update: any
+        Relationships: []
+      }
+      microcycles: {
+        Row: { id: string, week_number: number, mesocycle_id: string }
+        Insert: any
+        Update: any
+        Relationships: []
+      }
+      mesocycles: {
+        Row: { id: string, periodization_id: string }
+        Insert: any
+        Update: any
+        Relationships: []
+      }
+      sessions: {
+        Row: { id: string, label: string, name: string | null, microcycle_id: string }
+        Insert: any
+        Update: any
+        Relationships: []
+      }
+      prescription_items: {
+        Row: {
+          id: string
+          session_id: string
+          order_index: number
+          series: number | null
+          reps_min: number | null
+          reps_max: number | null
+          load_kg: number | null
+          rest_seconds: number | null
+        }
+        Insert: any
+        Update: any
+        Relationships: []
+      }
+      exercises: {
+        Row: { id: string, name_pt: string, aliases_pt: string[] | null, primary_muscle_id: string | null }
+        Insert: any
+        Update: any
         Relationships: []
       }
     }
