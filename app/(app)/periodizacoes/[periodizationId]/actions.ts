@@ -53,6 +53,8 @@ export async function updatePrescriptionItem(
     load_kg?: number
     rest_seconds?: number
     order_index?: number
+    rir_target?: number
+    rpe_target?: number
   }
 ) {
   const supabase = (await criarClienteServidor()) as any
@@ -88,7 +90,22 @@ export async function removePrescriptionItem(itemId: string) {
   return { success: true }
 }
 
-export async function searchExercises(query: string) {
+export async function getMuscles() {
+  const supabase = (await criarClienteServidor()) as any
+  const { data, error } = await supabase
+    .from('muscles')
+    .select('id, name_pt')
+    .order('name_pt')
+
+  if (error) {
+    console.error('Error fetching muscles:', error)
+    return { data: [] }
+  }
+
+  return { data }
+
+
+export async function searchExercises(query: string, muscleId?: string | null) {
   const supabase = (await criarClienteServidor()) as any
   
   let q = supabase
@@ -98,6 +115,10 @@ export async function searchExercises(query: string) {
   if (query.trim().length > 0) {
     // using unaccent + trgm or just ilike for MVP
     q = q.ilike('name_pt', `%${query}%`)
+  }
+
+  if (muscleId) {
+    q = q.eq('primary_muscle_id', muscleId)
   }
 
   const { data, error } = await q.limit(20)

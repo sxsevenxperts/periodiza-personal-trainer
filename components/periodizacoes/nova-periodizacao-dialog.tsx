@@ -22,24 +22,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { createPeriodization } from '@/app/(app)/periodizacoes/actions'
 
-export function NovaPeriodizacaoDialog() {
+export function NovaPeriodizacaoDialog({ alunos }: { alunos: any[] }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    
+    const clientId = formData.get('aluno') as string
+    const name = formData.get('nome') as string
+    const split = formData.get('split') as string
+    const weeks = parseInt(formData.get('semanas') as string, 10)
+    
+    if (!clientId || !name || !split || !weeks) return
+
     setLoading(true)
     
-    // MOCK: Simula a criação e redirecionamento para o builder
-    // TODO: chamar server action real para inserir na tabela periodizations
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      const { data, error } = await createPeriodization({
+        clientId,
+        name,
+        split,
+        weeks
+      })
+
+      if (error || !data) {
+        console.error(error)
+        alert('Erro ao criar periodização. Verifique se sua organização está configurada.')
+        setLoading(false)
+        return
+      }
+
       setOpen(false)
-      // ID hardcoded do mock para abrir o builder
-      router.push('/periodizacoes/123')
-    }, 1000)
+      router.push(`/periodizacoes/${data.id}`)
+    } catch (err) {
+      console.error(err)
+      setLoading(false)
+    }
   }
 
   return (
@@ -59,14 +82,18 @@ export function NovaPeriodizacaoDialog() {
         <form onSubmit={onSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="aluno">Aluno</Label>
-            <Select required>
+            <Select required name="aluno">
               <SelectTrigger id="aluno" className="bg-zinc-900 border-zinc-800">
                 <SelectValue placeholder="Selecione um aluno" />
               </SelectTrigger>
               <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-50">
-                <SelectItem value="joao">João Silva</SelectItem>
-                <SelectItem value="carlos">Carlos Pereira</SelectItem>
-                <SelectItem value="maria">Maria Oliveira</SelectItem>
+                {alunos.length === 0 ? (
+                  <SelectItem value="none" disabled>Nenhum aluno cadastrado</SelectItem>
+                ) : (
+                  alunos.map((aluno) => (
+                    <SelectItem key={aluno.id} value={aluno.id}>{aluno.name}</SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -83,7 +110,7 @@ export function NovaPeriodizacaoDialog() {
 
           <div className="space-y-2">
             <Label htmlFor="split">Divisão de Treino</Label>
-            <Select required defaultValue="ABC">
+            <Select required defaultValue="ABC" name="split">
               <SelectTrigger id="split" className="bg-zinc-900 border-zinc-800">
                 <SelectValue placeholder="Selecione a divisão" />
               </SelectTrigger>

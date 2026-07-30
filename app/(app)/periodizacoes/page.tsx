@@ -7,6 +7,8 @@ import { NovaPeriodizacaoDialog } from '@/components/periodizacoes/nova-periodiz
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 
+import { getAlunos } from '@/app/(app)/alunos/actions'
+
 export const metadata: Metadata = {
   title: 'Periodizações | Periodiza',
 }
@@ -35,7 +37,9 @@ const MOCK_PERIODIZACOES = [
   }
 ]
 
-export default function PaginaPeriodizacoes() {
+export default async function PaginaPeriodizacoes() {
+  const alunos = await getAlunos()
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -43,7 +47,7 @@ export default function PaginaPeriodizacoes() {
           titulo="Periodizações"
           descricao="Macrociclos, mesociclos e microciclos de cada aluno, com a divisão de treinos e a fase atual."
         />
-        <NovaPeriodizacaoDialog />
+        <NovaPeriodizacaoDialog alunos={alunos} />
       </div>
 
       <div className="flex flex-col gap-4">

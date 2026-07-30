@@ -3,13 +3,15 @@
 import { useState, useTransition, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { searchExercises, addPrescriptionItem } from '@/app/(app)/periodizacoes/[periodizationId]/actions'
+import { searchExercises, addPrescriptionItem, getMuscles } from '@/app/(app)/periodizacoes/[periodizationId]/actions'
 import { Search, Plus, Loader2 } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 export function CatalogSidebar({ activeSessionId }: { activeSessionId: string }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<any[]>([])
+  const [muscles, setMuscles] = useState<any[]>([])
+  const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [isAdding, setIsAdding] = useState<string | null>(null)
 
@@ -18,16 +20,25 @@ export function CatalogSidebar({ activeSessionId }: { activeSessionId: string })
     startTransition(async () => {
       const { data } = await searchExercises('')
       setResults(data || [])
+      
+      const { data: musclesData } = await getMuscles()
+      setMuscles(musclesData || [])
     })
   }, [])
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     startTransition(async () => {
-      const { data } = await searchExercises(query)
+      const { data } = await searchExercises(query, selectedMuscle)
       setResults(data || [])
     })
   }
+
+  // Effect to re-search when selectedMuscle changes
+  useEffect(() => {
+    handleSearch()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMuscle])
 
   const handleAdd = async (exerciseId: string) => {
     if (!activeSessionId) return
@@ -40,16 +51,29 @@ export function CatalogSidebar({ activeSessionId }: { activeSessionId: string })
     <div className="flex flex-col h-[calc(100vh-12rem)] border rounded-lg bg-zinc-950 border-zinc-800 overflow-hidden">
       <div className="p-4 border-b border-zinc-800 bg-zinc-900/50">
         <h3 className="font-semibold text-lg text-zinc-50 mb-4">Catálogo</h3>
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <Input 
-            placeholder="Ex: Supino..." 
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="bg-zinc-900 border-zinc-800 text-zinc-100"
-          />
-          <Button type="submit" disabled={isPending} size="icon" className="shrink-0 bg-amber-500 text-zinc-950 hover:bg-amber-600">
-            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-          </Button>
+        <form onSubmit={handleSearch} className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Ex: Supino..." 
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="bg-zinc-900 border-zinc-800 text-zinc-100"
+            />
+            <Button type="submit" disabled={isPending} size="icon" className="shrink-0 bg-amber-500 text-zinc-950 hover:bg-amber-600">
+              {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            </Button>
+          </div>
+          
+          <select 
+            value={selectedMuscle || ''} 
+            onChange={(e) => setSelectedMuscle(e.target.value || null)}
+            className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500 text-zinc-100"
+          >
+            <option value="">Todos os músculos</option>
+            {muscles.map((m) => (
+              <option key={m.id} value={m.id}>{m.name_pt}</option>
+            ))}
+          </select>
         </form>
       </div>
 

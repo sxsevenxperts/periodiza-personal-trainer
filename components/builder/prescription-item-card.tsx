@@ -62,7 +62,7 @@ export function PrescriptionItemCard({ item, index }: PrescriptionItemCardProps)
         >
           <div 
             {...provided.dragHandleProps}
-            className="mt-2 text-muted-foreground cursor-grab active:cursor-grabbing hover:text-amber-500 transition-colors"
+            className="mt-2 text-zinc-500 cursor-grab active:cursor-grabbing hover:text-amber-500 transition-colors"
           >
             <GripVertical className="w-5 h-5" />
           </div>
@@ -70,15 +70,22 @@ export function PrescriptionItemCard({ item, index }: PrescriptionItemCardProps)
           <div className="flex-1 space-y-4">
             <div className="flex justify-between items-start">
               <div>
-                <h4 className="font-semibold text-zinc-50">{item.exercises?.name_pt}</h4>
-                <p className="text-sm text-zinc-400">
-                  Ordem: {item.order_index + 1}
-                </p>
+                <h4 className="font-semibold text-zinc-50 leading-none">{item.exercises?.name_pt}</h4>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs bg-zinc-900 text-zinc-400 px-2 py-0.5 rounded-full border border-zinc-800">
+                    Ordem: {item.order_index + 1}
+                  </span>
+                  {item.exercises?.primary_muscle_id && (
+                    <span className="text-xs bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full border border-amber-500/20">
+                      Músculo: {item.exercises.primary_muscle_id.split('-').pop()}
+                    </span>
+                  )}
+                </div>
               </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                className="text-red-400 hover:text-red-300 hover:bg-red-400/10 h-8 w-8"
                 onClick={handleDelete}
                 disabled={isDeleting}
               >
@@ -86,9 +93,9 @@ export function PrescriptionItemCard({ item, index }: PrescriptionItemCardProps)
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-zinc-400">Séries</Label>
+                <Label className="text-[10px] uppercase text-zinc-500 font-bold">Séries</Label>
                 <Input 
                   type="number" 
                   defaultValue={item.series || ''} 
@@ -97,7 +104,7 @@ export function PrescriptionItemCard({ item, index }: PrescriptionItemCardProps)
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-zinc-400">Reps (Min)</Label>
+                <Label className="text-[10px] uppercase text-zinc-500 font-bold">Reps (Min)</Label>
                 <Input 
                   type="number" 
                   defaultValue={item.reps_min || ''} 
@@ -106,7 +113,7 @@ export function PrescriptionItemCard({ item, index }: PrescriptionItemCardProps)
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-zinc-400">Reps (Max)</Label>
+                <Label className="text-[10px] uppercase text-zinc-500 font-bold">Reps (Max)</Label>
                 <Input 
                   type="number" 
                   defaultValue={item.reps_max || ''} 
@@ -115,7 +122,7 @@ export function PrescriptionItemCard({ item, index }: PrescriptionItemCardProps)
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-zinc-400">Carga (kg)</Label>
+                <Label className="text-[10px] uppercase text-zinc-500 font-bold">Carga (kg)</Label>
                 <Input 
                   type="number" 
                   defaultValue={item.load_kg || ''} 
@@ -124,7 +131,27 @@ export function PrescriptionItemCard({ item, index }: PrescriptionItemCardProps)
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-zinc-400">Pausa (seg)</Label>
+                <Label className="text-[10px] uppercase text-zinc-500 font-bold">RIR</Label>
+                <Input 
+                  type="number" 
+                  defaultValue={item.rir_target || ''} 
+                  onChange={(e) => onChange('rir_target', e.target.value)}
+                  className="h-8 bg-zinc-900 border-zinc-800 text-zinc-100"
+                  placeholder="ex: 2"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase text-zinc-500 font-bold">RPE</Label>
+                <Input 
+                  type="number" 
+                  defaultValue={item.rpe_target || ''} 
+                  onChange={(e) => onChange('rpe_target', e.target.value)}
+                  className="h-8 bg-zinc-900 border-zinc-800 text-zinc-100"
+                  placeholder="ex: 8"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase text-zinc-500 font-bold">Pausa (seg)</Label>
                 <Input 
                   type="number" 
                   defaultValue={item.rest_seconds || ''} 
