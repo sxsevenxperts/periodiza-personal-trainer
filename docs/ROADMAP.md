@@ -13,9 +13,18 @@
 - [x] **ETAPA 4 — Integração completa do Builder**: WorkoutBuilder em `components/builder/workout-builder.tsx` que integra todos os componentes, gerencia estado local de prescrições, integra com actions, suporta drag-drop e toast com desfazer.
 
 ### Em andamento
-- [ ] Aplicar migration 0010 no Supabase (bloqueador crítico para funcionar em produção).
+- [ ] **CRÍTICO**: Aplicar migration 0010 no Supabase (bloqueador crítico para funcionar em produção).
+  - Ver: `docs/DEPLOYMENT_MIGRATION_0010.md` para guia de deployment (3 opções: psql, Admin API, Dashboard)
 - [ ] Validar RPC search_exercises() após aplicação da migration.
-- [ ] Testes E2E: criar 7 treinos (A-G), buscar "hip thrust", drag-drop entre abas.
+- [ ] Testes E2E: Ver `docs/E2E_TESTS_TREINO_BUILDER.md` (15 test cases completos).
+
+### Funcionalidades Prontas (Etapa 4)
+- [x] Deletar exercício (com confirmação visual + toast)
+- [x] Mover exercício entre abas (com dropdown menu)
+- [x] Copiar exercício para outra aba (com dropdown menu)
+- [x] Gerenciamento de menus dropdown (openMenuId state)
+- [x] Toast com feedback para cada ação
+- [x] Drag-start preparation (para drag-drop futuro entre abas)
 
 ### Próximos passos
 - [ ] Página de periodização que renderiza o Builder (conexão com microcycle/session/prescription).
