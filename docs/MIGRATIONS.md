@@ -10,16 +10,54 @@ numérica. O deploy do app **não** as executa — é um passo manual.
 | 0001 – 0009 | sim (schema em uso) |
 | 0010 | **não** — pendente |
 
-> ⚠️ **Verificação de 30/07:** `https://xpert-backend-supabase.qfotry.easypanel.host`
-> respondeu **404 em todas as rotas testadas** (`/`, `/rest/v1/`, `/auth/v1/health`),
-> com uma página HTML genérica de "Not Found" — não com o formato de erro do
-> PostgREST. As portas 5432 e 6543 também não responderam.
+> ⚠️ **Diagnóstico de 30/07 — a API do Supabase não está sendo servida.**
 >
-> Ou seja: nesse endereço não há uma API do Supabase atendendo. Antes de aplicar
-> a migration, confirme no EasyPanel qual é a URL pública correta do serviço
-> Supabase (a que serve `/rest/v1/`) e se ele está em execução. O mesmo endereço
-> é o que o app usa em `NEXT_PUBLIC_SUPABASE_URL` — se estiver errado, o deploy
-> sobe mas nenhuma tela carrega dados.
+> `https://xpert-backend-supabase.qfotry.easypanel.host` devolveu **404 em
+> todas as rotas** (`/`, `/rest/v1/`, `/auth/v1/health`), com página HTML
+> genérica em vez do formato de erro do PostgREST. As portas 5432 e 6543
+> também não responderam.
+>
+> **Não é problema de DNS nem de host.** O nome resolve para `164.68.116.21`,
+> o mesmo servidor do painel do EasyPanel — a requisição chega ao destino
+> certo e recebe um 404 real.
+>
+> **Causa provável:** em Supabase self-hosted, quem serve `/rest/v1/`,
+> `/auth/v1/` e `/storage/v1/` é o gateway **Kong** (porta `8000`). Um 404 em
+> HTML indica que o domínio está roteado para outro serviço da stack — o
+> Studio, por exemplo — e não para o Kong.
+>
+> Ver "Descobrir a URL correta da API" abaixo.
+
+---
+
+## Descobrir a URL correta da API do Supabase
+
+No painel do EasyPanel, dentro do projeto que hospeda o Supabase:
+
+1. Localize o serviço do **gateway da API** — costuma se chamar `kong`,
+   `supabase-kong` ou similar, e expõe a porta **8000**. Não confunda com
+   `studio` (interface web), `rest` (PostgREST interno) ou `db` (Postgres).
+2. Abra a aba de **Domains / Proxy** desse serviço e veja qual domínio público
+   está mapeado para a porta 8000.
+3. Esse domínio é o valor de `NEXT_PUBLIC_SUPABASE_URL`.
+
+### Confirmar que a URL está certa
+
+```bash
+curl -i "https://<URL-DO-KONG>/rest/v1/" -H "apikey: <chave-anon>"
+```
+
+| Resposta | Significado |
+|---|---|
+| `HTTP 200` com JSON (OpenAPI) | ✅ é a URL correta |
+| `HTTP 401` com `{"message":"No API key found..."}` | ✅ é o Kong; só faltou a chave |
+| `HTTP 404` com HTML | ❌ domínio apontando para o serviço errado |
+
+O mesmo endereço serve para a aplicação e para o SQL Editor do Studio. Se o
+Postgres (5432) não estiver exposto publicamente — que é o caso aqui — o Studio
+passa a ser o caminho para aplicar a migration.
+
+---
 
 ## Aplicar a 0010
 

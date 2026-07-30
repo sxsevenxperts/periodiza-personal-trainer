@@ -1,5 +1,74 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Diagnóstico do endpoint do Supabase: roteamento, não DNS
+
+### Objetivo
+Refinar o diagnóstico do endpoint do Supabase, que na entrada anterior ficou em
+"não responde", sem causa identificada.
+
+### Investigação
+A URL fornecida (`https://164.68.116.21/projects/startups/app/periodizacao/deployments`)
+é a do **painel do EasyPanel**, não a da API do Supabase. Ainda assim, ela
+permitiu fechar o diagnóstico:
+
+- `getent hosts xpert-backend-supabase.qfotry.easypanel.host` →
+  **`164.68.116.21`**, o mesmo servidor do painel.
+- Logo, o DNS está correto e as requisições anteriores **chegaram ao destino
+  certo**. Os 404 são respostas reais do servidor, não erro de resolução.
+- O painel em si e a porta 3000 não são alcançáveis do ambiente de
+  desenvolvimento (`HTTP 000`), o que é esperado — o proxy de saída não trata
+  HTTPS em IP puro sem SNI correspondente.
+
+### Conclusão do diagnóstico
+Em Supabase self-hosted, `/rest/v1/`, `/auth/v1/` e `/storage/v1/` são servidos
+pelo gateway **Kong**, na porta 8000. Um 404 em HTML nessas rotas indica que o
+domínio público está roteado para **outro serviço da stack** — o Studio, por
+exemplo — e não para o Kong.
+
+Não é falta de DNS nem servidor fora do ar: é mapeamento de domínio para o
+serviço errado dentro do projeto do EasyPanel.
+
+### Alterações realizadas
+- `docs/MIGRATIONS.md`: bloco de diagnóstico reescrito com a evidência do DNS e
+  a causa provável; nova seção "Descobrir a URL correta da API do Supabase",
+  com os passos no painel e uma tabela de interpretação da resposta do `curl`
+  (200 = certo, 401 sem chave = é o Kong, 404 HTML = serviço errado).
+- `docs/ROADMAP.md`: item crítico reescrito com o diagnóstico preciso, em vez
+  de "não responde".
+
+### Decisões técnicas
+- **Não tentei autenticar no painel.** É uma interface administrativa de
+  terceiro; sondar sessão ou credencial estaria fora do que foi pedido.
+- **Documentar o teste de `curl` com as três respostas possíveis**: distinguir
+  "URL errada" de "URL certa, faltou a chave" é o que trava o diagnóstico de
+  quem for corrigir — um 401 do Kong é sinal de acerto, não de erro.
+
+### Validações executadas
+- Resolução DNS confirmada (`getent hosts`).
+- Alcance do painel e da porta 3000 testados (`HTTP 000`, inacessíveis daqui).
+- Rotas `/`, `/rest/v1/`, `/auth/v1/health` testadas anteriormente: 404 em HTML.
+- Formato da resposta comparado ao do PostgREST (`{"code":"PGRST...")` — não
+  corresponde, confirmando que não é o PostgREST atendendo.
+
+Nenhuma alteração de código nesta entrada; apenas documentação.
+
+### Impactos
+- **Operacional**: a correção deixa de ser "descobrir por que não responde" e
+  passa a ser "apontar o domínio para o serviço Kong", que é acionável no painel.
+- **Negócio**: segue bloqueando tanto a migration quanto o funcionamento do app
+  em produção.
+
+### Pendências
+- Apontar o domínio para o gateway Kong (porta 8000) no EasyPanel, ou obter a
+  URL correta se já existir outra.
+- Aplicar a 0010 (`npm run db:migrate`) assim que houver acesso.
+- Rotacionar `GROQ_API_KEY` e a chave anon.
+
+### Arquivos principais envolvidos
+- `docs/MIGRATIONS.md`, `docs/ROADMAP.md`
+
+---
+
 ## 2026-07-30 — Tentativa de aplicar a migration 0010; ferramenta criada e endpoint do Supabase inacessível
 
 ### Objetivo
