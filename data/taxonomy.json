@@ -1,0 +1,1956 @@
+{
+  "padroes_movimento": [
+    {
+      "slug": "agachamento",
+      "nome_pt": "Agachamento",
+      "nome_en": "Squat",
+      "dominancia": "joelho",
+      "descricao": "Flexão e extensão simultâneas de tornozelo, joelho e quadril em cadeia fechada com tronco próximo da vertical e dominância dos extensores de joelho."
+    },
+    {
+      "slug": "dobradica-de-quadril",
+      "nome_pt": "Dobradiça de quadril",
+      "nome_en": "Hip hinge",
+      "dominancia": "quadril",
+      "descricao": "Flexão e extensão de quadril com joelho pouco flexionado, coluna neutra e deslocamento posterior da pelve, priorizando glúteos e isquiotibiais."
+    },
+    {
+      "slug": "empurrar-horizontal",
+      "nome_pt": "Empurrar horizontal",
+      "nome_en": "Horizontal push",
+      "dominancia": "empurrar_horizontal",
+      "descricao": "Extensão de cotovelo somada à adução horizontal e flexão de ombro contra resistência que se afasta do tronco no plano transverso."
+    },
+    {
+      "slug": "puxar-horizontal",
+      "nome_pt": "Puxar horizontal",
+      "nome_en": "Horizontal pull",
+      "dominancia": "puxar_horizontal",
+      "descricao": "Flexão de cotovelo somada à extensão e abdução horizontal de ombro contra resistência que se aproxima do tronco no plano transverso."
+    },
+    {
+      "slug": "empurrar-vertical",
+      "nome_pt": "Empurrar vertical",
+      "nome_en": "Vertical push",
+      "dominancia": "empurrar_vertical",
+      "descricao": "Extensão de cotovelo somada à flexão e abdução de ombro acima da linha da cabeça, com elevação e rotação superior da escápula."
+    },
+    {
+      "slug": "puxar-vertical",
+      "nome_pt": "Puxar vertical",
+      "nome_en": "Vertical pull",
+      "dominancia": "puxar_vertical",
+      "descricao": "Adução e extensão de ombro a partir de posição elevada, com depressão escapular e flexão de cotovelo, priorizando latíssimo do dorso."
+    },
+    {
+      "slug": "transporte-carregado",
+      "nome_pt": "Transporte de carga",
+      "nome_en": "Loaded carry",
+      "dominancia": "transporte",
+      "descricao": "Locomoção sustentando carga externa, com trabalho isométrico global de core, cintura escapular e preensão."
+    },
+    {
+      "slug": "rotacao-de-tronco",
+      "nome_pt": "Rotação de tronco",
+      "nome_en": "Trunk rotation",
+      "dominancia": "core",
+      "descricao": "Rotação ativa e resistida do tronco no plano transverso produzida por oblíquos e musculatura profunda do quadril."
+    },
+    {
+      "slug": "anti-rotacao",
+      "nome_pt": "Anti-rotação",
+      "nome_en": "Anti-rotation",
+      "dominancia": "core",
+      "descricao": "Resistência isométrica a um torque rotacional externo, mantendo pelve e caixa torácica alinhadas."
+    },
+    {
+      "slug": "anti-extensao",
+      "nome_pt": "Anti-extensão",
+      "nome_en": "Anti-extension",
+      "dominancia": "core",
+      "descricao": "Resistência isométrica à extensão lombar e à anteversão pélvica, com predomínio de reto do abdome e parede abdominal profunda."
+    },
+    {
+      "slug": "anti-flexao-lateral",
+      "nome_pt": "Anti-flexão lateral",
+      "nome_en": "Anti-lateral flexion",
+      "dominancia": "core",
+      "descricao": "Resistência isométrica à flexão lateral do tronco diante de carga assimétrica, com predomínio de oblíquos e quadrado lombar."
+    },
+    {
+      "slug": "passada-unilateral",
+      "nome_pt": "Passada e afundo",
+      "nome_en": "Lunge and split stance",
+      "dominancia": "joelho",
+      "descricao": "Movimento em base dividida ou apoio alternado, com carga assimétrica entre os membros e demanda simultânea de força e estabilidade frontal."
+    },
+    {
+      "slug": "flexao-de-joelho",
+      "nome_pt": "Flexão de joelho",
+      "nome_en": "Knee flexion",
+      "dominancia": "isolado",
+      "descricao": "Movimento monoarticular de flexão de joelho, priorizando isquiotibiais com influência do ângulo de quadril."
+    },
+    {
+      "slug": "extensao-de-joelho",
+      "nome_pt": "Extensão de joelho",
+      "nome_en": "Knee extension",
+      "dominancia": "isolado",
+      "descricao": "Movimento monoarticular de extensão de joelho em cadeia aberta ou semiaberta, priorizando o quadríceps."
+    },
+    {
+      "slug": "flexao-plantar",
+      "nome_pt": "Flexão plantar",
+      "nome_en": "Plantar flexion",
+      "dominancia": "tornozelo",
+      "descricao": "Extensão do tornozelo contra resistência, com participação de gastrocnêmio e sóleo modulada pelo ângulo de joelho."
+    },
+    {
+      "slug": "dorsiflexao",
+      "nome_pt": "Dorsiflexão",
+      "nome_en": "Dorsiflexion",
+      "dominancia": "tornozelo",
+      "descricao": "Flexão dorsal do tornozelo contra resistência, priorizando tibial anterior e extensores dos dedos."
+    },
+    {
+      "slug": "abducao-de-quadril",
+      "nome_pt": "Abdução de quadril",
+      "nome_en": "Hip abduction",
+      "dominancia": "isolado",
+      "descricao": "Afastamento do fêmur da linha média no plano frontal, priorizando glúteo médio, glúteo mínimo e tensor da fáscia lata."
+    },
+    {
+      "slug": "aducao-de-quadril",
+      "nome_pt": "Adução de quadril",
+      "nome_en": "Hip adduction",
+      "dominancia": "isolado",
+      "descricao": "Aproximação do fêmur da linha média no plano frontal, priorizando o grupo adutor e o grácil."
+    },
+    {
+      "slug": "extensao-de-quadril",
+      "nome_pt": "Extensão de quadril",
+      "nome_en": "Hip extension",
+      "dominancia": "quadril",
+      "descricao": "Extensão de quadril com joelho relativamente fixo e tronco apoiado, priorizando glúteo máximo com vetor de resistência perpendicular ao fêmur."
+    },
+    {
+      "slug": "elevacao-escapular",
+      "nome_pt": "Elevação escapular",
+      "nome_en": "Scapular elevation",
+      "dominancia": "isolado",
+      "descricao": "Elevação da escápula em relação ao tórax, priorizando trapézio superior e levantador da escápula."
+    },
+    {
+      "slug": "retracao-escapular",
+      "nome_pt": "Retração escapular",
+      "nome_en": "Scapular retraction",
+      "dominancia": "puxar_horizontal",
+      "descricao": "Adução e retração escapular com pouca contribuição do cotovelo, priorizando trapézio médio, romboides e deltoide posterior."
+    },
+    {
+      "slug": "depressao-escapular",
+      "nome_pt": "Depressão escapular",
+      "nome_en": "Scapular depression",
+      "dominancia": "puxar_vertical",
+      "descricao": "Depressão e rotação inferior da escápula com cotovelo estendido, priorizando trapézio inferior, latíssimo e peitoral menor excêntrico."
+    },
+    {
+      "slug": "rotacao-externa-de-ombro",
+      "nome_pt": "Rotação externa de ombro",
+      "nome_en": "Shoulder external rotation",
+      "dominancia": "isolado",
+      "descricao": "Rotação lateral do úmero contra resistência, priorizando infraespinal e redondo menor com controle escapular."
+    },
+    {
+      "slug": "rotacao-interna-de-ombro",
+      "nome_pt": "Rotação interna de ombro",
+      "nome_en": "Shoulder internal rotation",
+      "dominancia": "isolado",
+      "descricao": "Rotação medial do úmero contra resistência, priorizando subescapular, peitoral maior e latíssimo."
+    },
+    {
+      "slug": "abducao-de-ombro",
+      "nome_pt": "Abdução de ombro",
+      "nome_en": "Shoulder abduction",
+      "dominancia": "isolado",
+      "descricao": "Elevação do úmero no plano frontal ou escapular com cotovelo pouco móvel, priorizando deltoide medial e supraespinal."
+    },
+    {
+      "slug": "flexao-de-ombro",
+      "nome_pt": "Flexão de ombro",
+      "nome_en": "Shoulder flexion",
+      "dominancia": "isolado",
+      "descricao": "Elevação do úmero no plano sagital com cotovelo quase estendido, priorizando deltoide anterior e porção clavicular do peitoral."
+    },
+    {
+      "slug": "extensao-de-cotovelo",
+      "nome_pt": "Extensão de cotovelo",
+      "nome_en": "Elbow extension",
+      "dominancia": "isolado",
+      "descricao": "Movimento monoarticular de extensão de cotovelo, com participação da porção longa do tríceps modulada pelo ângulo de ombro."
+    },
+    {
+      "slug": "flexao-de-cotovelo",
+      "nome_pt": "Flexão de cotovelo",
+      "nome_en": "Elbow flexion",
+      "dominancia": "isolado",
+      "descricao": "Movimento monoarticular de flexão de cotovelo, com participação de bíceps, braquial e braquiorradial modulada pela pronossupinação e pelo ângulo de ombro."
+    },
+    {
+      "slug": "flexao-extensao-de-punho",
+      "nome_pt": "Flexão e extensão de punho",
+      "nome_en": "Wrist flexion and extension",
+      "dominancia": "isolado",
+      "descricao": "Movimento isolado do punho e da pronossupinação do antebraço contra resistência, com antebraço apoiado."
+    },
+    {
+      "slug": "preensao",
+      "nome_pt": "Preensão manual",
+      "nome_en": "Grip",
+      "dominancia": "isolado",
+      "descricao": "Sustentação ou fechamento resistido da mão como demanda principal, priorizando flexores profundos e superficiais dos dedos."
+    },
+    {
+      "slug": "tripla-extensao",
+      "nome_pt": "Tripla extensão",
+      "nome_en": "Triple extension",
+      "dominancia": "potencia_total",
+      "descricao": "Extensão explosiva e coordenada de quadril, joelho e tornozelo para acelerar uma carga externa, com recepção estruturada."
+    },
+    {
+      "slug": "arremesso",
+      "nome_pt": "Arremesso e lançamento",
+      "nome_en": "Throw and toss",
+      "dominancia": "potencia_total",
+      "descricao": "Projeção balística de um implemento com sequência proximal-distal e sem fase de desaceleração final do membro."
+    },
+    {
+      "slug": "salto",
+      "nome_pt": "Salto",
+      "nome_en": "Jump",
+      "dominancia": "potencia_total",
+      "descricao": "Projeção do próprio corpo com fase de voo e recepção, usando o ciclo alongamento-encurtamento dos extensores de membros inferiores."
+    },
+    {
+      "slug": "sprint-aceleracao",
+      "nome_pt": "Sprint e aceleração",
+      "nome_en": "Sprint and acceleration",
+      "dominancia": "potencia_total",
+      "descricao": "Locomoção horizontal em velocidade máxima ou contra resistência externa, com produção de força horizontal e alternância de apoios."
+    },
+    {
+      "slug": "flexao-de-tronco",
+      "nome_pt": "Flexão de tronco",
+      "nome_en": "Trunk flexion",
+      "dominancia": "core",
+      "descricao": "Flexão ativa da coluna aproximando esterno e pelve, priorizando reto do abdome e oblíquos."
+    },
+    {
+      "slug": "extensao-de-tronco",
+      "nome_pt": "Extensão de tronco",
+      "nome_en": "Trunk extension",
+      "dominancia": "core",
+      "descricao": "Extensão ativa da coluna toracolombar contra resistência, priorizando eretores da espinha e cadeia posterior do tronco."
+    },
+    {
+      "slug": "flexao-extensao-cervical",
+      "nome_pt": "Flexão e extensão cervical",
+      "nome_en": "Cervical flexion and extension",
+      "dominancia": "isolado",
+      "descricao": "Movimento resistido do segmento cervical em flexão, extensão ou flexão lateral, incluindo sustentações isométricas."
+    }
+  ],
+  "regioes_corporais": [
+    {
+      "slug": "quadriceps",
+      "nome_pt": "Quadríceps",
+      "nome_en": "Quadriceps"
+    },
+    {
+      "slug": "posteriores-de-coxa",
+      "nome_pt": "Posteriores de coxa",
+      "nome_en": "Hamstrings"
+    },
+    {
+      "slug": "gluteos-e-quadril",
+      "nome_pt": "Glúteos e quadril",
+      "nome_en": "Glutes and hip"
+    },
+    {
+      "slug": "panturrilha-e-tornozelo",
+      "nome_pt": "Panturrilha e tornozelo",
+      "nome_en": "Calves and ankle"
+    },
+    {
+      "slug": "peitoral",
+      "nome_pt": "Peitoral",
+      "nome_en": "Chest"
+    },
+    {
+      "slug": "dorsais-e-costas",
+      "nome_pt": "Dorsais e costas",
+      "nome_en": "Lats and back"
+    },
+    {
+      "slug": "ombros",
+      "nome_pt": "Ombros",
+      "nome_en": "Shoulders"
+    },
+    {
+      "slug": "trapezio-e-escapula",
+      "nome_pt": "Trapézio e escápula",
+      "nome_en": "Traps and scapula"
+    },
+    {
+      "slug": "biceps-e-antebraco",
+      "nome_pt": "Bíceps e antebraço",
+      "nome_en": "Biceps and forearm"
+    },
+    {
+      "slug": "triceps",
+      "nome_pt": "Tríceps",
+      "nome_en": "Triceps"
+    },
+    {
+      "slug": "core-e-abdomen",
+      "nome_pt": "Core e abdômen",
+      "nome_en": "Core and abdominals"
+    },
+    {
+      "slug": "cervical",
+      "nome_pt": "Cervical",
+      "nome_en": "Neck"
+    }
+  ],
+  "musculos": [
+    {
+      "slug": "reto-femoral",
+      "nome_pt": "Reto femoral",
+      "nome_en": "Rectus femoris",
+      "regiao_corporal": "quadriceps"
+    },
+    {
+      "slug": "vasto-lateral",
+      "nome_pt": "Vasto lateral",
+      "nome_en": "Vastus lateralis",
+      "regiao_corporal": "quadriceps"
+    },
+    {
+      "slug": "vasto-medial",
+      "nome_pt": "Vasto medial",
+      "nome_en": "Vastus medialis",
+      "regiao_corporal": "quadriceps"
+    },
+    {
+      "slug": "vasto-intermedio",
+      "nome_pt": "Vasto intermédio",
+      "nome_en": "Vastus intermedius",
+      "regiao_corporal": "quadriceps"
+    },
+    {
+      "slug": "biceps-femoral-porcao-longa",
+      "nome_pt": "Bíceps femoral porção longa",
+      "nome_en": "Biceps femoris long head",
+      "regiao_corporal": "posteriores-de-coxa"
+    },
+    {
+      "slug": "biceps-femoral-porcao-curta",
+      "nome_pt": "Bíceps femoral porção curta",
+      "nome_en": "Biceps femoris short head",
+      "regiao_corporal": "posteriores-de-coxa"
+    },
+    {
+      "slug": "semitendineo",
+      "nome_pt": "Semitendíneo",
+      "nome_en": "Semitendinosus",
+      "regiao_corporal": "posteriores-de-coxa"
+    },
+    {
+      "slug": "semimembranaceo",
+      "nome_pt": "Semimembranáceo",
+      "nome_en": "Semimembranosus",
+      "regiao_corporal": "posteriores-de-coxa"
+    },
+    {
+      "slug": "popliteo",
+      "nome_pt": "Poplíteo",
+      "nome_en": "Popliteus",
+      "regiao_corporal": "posteriores-de-coxa"
+    },
+    {
+      "slug": "gluteo-maximo",
+      "nome_pt": "Glúteo máximo",
+      "nome_en": "Gluteus maximus",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "gluteo-medio",
+      "nome_pt": "Glúteo médio",
+      "nome_en": "Gluteus medius",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "gluteo-minimo",
+      "nome_pt": "Glúteo mínimo",
+      "nome_en": "Gluteus minimus",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "tensor-da-fascia-lata",
+      "nome_pt": "Tensor da fáscia lata",
+      "nome_en": "Tensor fasciae latae",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "piriforme",
+      "nome_pt": "Piriforme",
+      "nome_en": "Piriformis",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "rotadores-profundos-do-quadril",
+      "nome_pt": "Rotadores profundos do quadril",
+      "nome_en": "Deep hip rotators",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "adutor-magno",
+      "nome_pt": "Adutor magno",
+      "nome_en": "Adductor magnus",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "adutor-longo",
+      "nome_pt": "Adutor longo",
+      "nome_en": "Adductor longus",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "adutor-curto",
+      "nome_pt": "Adutor curto",
+      "nome_en": "Adductor brevis",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "pectineo",
+      "nome_pt": "Pectíneo",
+      "nome_en": "Pectineus",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "gracil",
+      "nome_pt": "Grácil",
+      "nome_en": "Gracilis",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "iliaco",
+      "nome_pt": "Ilíaco",
+      "nome_en": "Iliacus",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "psoas-maior",
+      "nome_pt": "Psoas maior",
+      "nome_en": "Psoas major",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "sartorio",
+      "nome_pt": "Sartório",
+      "nome_en": "Sartorius",
+      "regiao_corporal": "gluteos-e-quadril"
+    },
+    {
+      "slug": "gastrocnemio-medial",
+      "nome_pt": "Gastrocnêmio medial",
+      "nome_en": "Medial gastrocnemius",
+      "regiao_corporal": "panturrilha-e-tornozelo"
+    },
+    {
+      "slug": "gastrocnemio-lateral",
+      "nome_pt": "Gastrocnêmio lateral",
+      "nome_en": "Lateral gastrocnemius",
+      "regiao_corporal": "panturrilha-e-tornozelo"
+    },
+    {
+      "slug": "soleo",
+      "nome_pt": "Sóleo",
+      "nome_en": "Soleus",
+      "regiao_corporal": "panturrilha-e-tornozelo"
+    },
+    {
+      "slug": "plantar",
+      "nome_pt": "Plantar",
+      "nome_en": "Plantaris",
+      "regiao_corporal": "panturrilha-e-tornozelo"
+    },
+    {
+      "slug": "tibial-posterior",
+      "nome_pt": "Tibial posterior",
+      "nome_en": "Tibialis posterior",
+      "regiao_corporal": "panturrilha-e-tornozelo"
+    },
+    {
+      "slug": "tibial-anterior",
+      "nome_pt": "Tibial anterior",
+      "nome_en": "Tibialis anterior",
+      "regiao_corporal": "panturrilha-e-tornozelo"
+    },
+    {
+      "slug": "fibular-longo",
+      "nome_pt": "Fibular longo",
+      "nome_en": "Peroneus longus",
+      "regiao_corporal": "panturrilha-e-tornozelo"
+    },
+    {
+      "slug": "fibular-curto",
+      "nome_pt": "Fibular curto",
+      "nome_en": "Peroneus brevis",
+      "regiao_corporal": "panturrilha-e-tornozelo"
+    },
+    {
+      "slug": "extensor-longo-dos-dedos",
+      "nome_pt": "Extensor longo dos dedos",
+      "nome_en": "Extensor digitorum longus",
+      "regiao_corporal": "panturrilha-e-tornozelo"
+    },
+    {
+      "slug": "flexor-longo-dos-dedos",
+      "nome_pt": "Flexor longo dos dedos",
+      "nome_en": "Flexor digitorum longus",
+      "regiao_corporal": "panturrilha-e-tornozelo"
+    },
+    {
+      "slug": "peitoral-maior-porcao-clavicular",
+      "nome_pt": "Peitoral maior porção clavicular",
+      "nome_en": "Pectoralis major clavicular head",
+      "regiao_corporal": "peitoral"
+    },
+    {
+      "slug": "peitoral-maior-porcao-esternal",
+      "nome_pt": "Peitoral maior porção esternal",
+      "nome_en": "Pectoralis major sternal head",
+      "regiao_corporal": "peitoral"
+    },
+    {
+      "slug": "peitoral-maior-porcao-abdominal",
+      "nome_pt": "Peitoral maior porção abdominal",
+      "nome_en": "Pectoralis major abdominal head",
+      "regiao_corporal": "peitoral"
+    },
+    {
+      "slug": "peitoral-menor",
+      "nome_pt": "Peitoral menor",
+      "nome_en": "Pectoralis minor",
+      "regiao_corporal": "peitoral"
+    },
+    {
+      "slug": "latissimo-do-dorso",
+      "nome_pt": "Latíssimo do dorso",
+      "nome_en": "Latissimus dorsi",
+      "regiao_corporal": "dorsais-e-costas"
+    },
+    {
+      "slug": "redondo-maior",
+      "nome_pt": "Redondo maior",
+      "nome_en": "Teres major",
+      "regiao_corporal": "dorsais-e-costas"
+    },
+    {
+      "slug": "iliocostal-lombar",
+      "nome_pt": "Iliocostal lombar",
+      "nome_en": "Iliocostalis lumborum",
+      "regiao_corporal": "dorsais-e-costas"
+    },
+    {
+      "slug": "longuissimo-do-torax",
+      "nome_pt": "Longuíssimo do tórax",
+      "nome_en": "Longissimus thoracis",
+      "regiao_corporal": "dorsais-e-costas"
+    },
+    {
+      "slug": "espinhal-do-torax",
+      "nome_pt": "Espinhal do tórax",
+      "nome_en": "Spinalis thoracis",
+      "regiao_corporal": "dorsais-e-costas"
+    },
+    {
+      "slug": "serratil-posterior-inferior",
+      "nome_pt": "Serrátil posterior inferior",
+      "nome_en": "Serratus posterior inferior",
+      "regiao_corporal": "dorsais-e-costas"
+    },
+    {
+      "slug": "trapezio-superior",
+      "nome_pt": "Trapézio superior",
+      "nome_en": "Upper trapezius",
+      "regiao_corporal": "trapezio-e-escapula"
+    },
+    {
+      "slug": "trapezio-medio",
+      "nome_pt": "Trapézio médio",
+      "nome_en": "Middle trapezius",
+      "regiao_corporal": "trapezio-e-escapula"
+    },
+    {
+      "slug": "trapezio-inferior",
+      "nome_pt": "Trapézio inferior",
+      "nome_en": "Lower trapezius",
+      "regiao_corporal": "trapezio-e-escapula"
+    },
+    {
+      "slug": "romboide-maior",
+      "nome_pt": "Romboide maior",
+      "nome_en": "Rhomboid major",
+      "regiao_corporal": "trapezio-e-escapula"
+    },
+    {
+      "slug": "romboide-menor",
+      "nome_pt": "Romboide menor",
+      "nome_en": "Rhomboid minor",
+      "regiao_corporal": "trapezio-e-escapula"
+    },
+    {
+      "slug": "levantador-da-escapula",
+      "nome_pt": "Levantador da escápula",
+      "nome_en": "Levator scapulae",
+      "regiao_corporal": "trapezio-e-escapula"
+    },
+    {
+      "slug": "serratil-anterior",
+      "nome_pt": "Serrátil anterior",
+      "nome_en": "Serratus anterior",
+      "regiao_corporal": "trapezio-e-escapula"
+    },
+    {
+      "slug": "deltoide-anterior",
+      "nome_pt": "Deltoide anterior",
+      "nome_en": "Anterior deltoid",
+      "regiao_corporal": "ombros"
+    },
+    {
+      "slug": "deltoide-medial",
+      "nome_pt": "Deltoide medial",
+      "nome_en": "Middle deltoid",
+      "regiao_corporal": "ombros"
+    },
+    {
+      "slug": "deltoide-posterior",
+      "nome_pt": "Deltoide posterior",
+      "nome_en": "Posterior deltoid",
+      "regiao_corporal": "ombros"
+    },
+    {
+      "slug": "supraespinal",
+      "nome_pt": "Supraespinal",
+      "nome_en": "Supraspinatus",
+      "regiao_corporal": "ombros"
+    },
+    {
+      "slug": "infraespinal",
+      "nome_pt": "Infraespinal",
+      "nome_en": "Infraspinatus",
+      "regiao_corporal": "ombros"
+    },
+    {
+      "slug": "subescapular",
+      "nome_pt": "Subescapular",
+      "nome_en": "Subscapularis",
+      "regiao_corporal": "ombros"
+    },
+    {
+      "slug": "redondo-menor",
+      "nome_pt": "Redondo menor",
+      "nome_en": "Teres minor",
+      "regiao_corporal": "ombros"
+    },
+    {
+      "slug": "coracobraquial",
+      "nome_pt": "Coracobraquial",
+      "nome_en": "Coracobrachialis",
+      "regiao_corporal": "ombros"
+    },
+    {
+      "slug": "biceps-braquial-porcao-longa",
+      "nome_pt": "Bíceps braquial porção longa",
+      "nome_en": "Biceps brachii long head",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "biceps-braquial-porcao-curta",
+      "nome_pt": "Bíceps braquial porção curta",
+      "nome_en": "Biceps brachii short head",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "braquial",
+      "nome_pt": "Braquial",
+      "nome_en": "Brachialis",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "braquiorradial",
+      "nome_pt": "Braquiorradial",
+      "nome_en": "Brachioradialis",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "pronador-redondo",
+      "nome_pt": "Pronador redondo",
+      "nome_en": "Pronator teres",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "supinador",
+      "nome_pt": "Supinador",
+      "nome_en": "Supinator",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "flexor-radial-do-carpo",
+      "nome_pt": "Flexor radial do carpo",
+      "nome_en": "Flexor carpi radialis",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "flexor-ulnar-do-carpo",
+      "nome_pt": "Flexor ulnar do carpo",
+      "nome_en": "Flexor carpi ulnaris",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "flexor-superficial-dos-dedos",
+      "nome_pt": "Flexor superficial dos dedos",
+      "nome_en": "Flexor digitorum superficialis",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "flexor-profundo-dos-dedos",
+      "nome_pt": "Flexor profundo dos dedos",
+      "nome_en": "Flexor digitorum profundus",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "extensor-radial-longo-do-carpo",
+      "nome_pt": "Extensor radial longo do carpo",
+      "nome_en": "Extensor carpi radialis longus",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "extensor-ulnar-do-carpo",
+      "nome_pt": "Extensor ulnar do carpo",
+      "nome_en": "Extensor carpi ulnaris",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "extensor-dos-dedos",
+      "nome_pt": "Extensor dos dedos",
+      "nome_en": "Extensor digitorum",
+      "regiao_corporal": "biceps-e-antebraco"
+    },
+    {
+      "slug": "triceps-braquial-porcao-longa",
+      "nome_pt": "Tríceps braquial porção longa",
+      "nome_en": "Triceps brachii long head",
+      "regiao_corporal": "triceps"
+    },
+    {
+      "slug": "triceps-braquial-porcao-lateral",
+      "nome_pt": "Tríceps braquial porção lateral",
+      "nome_en": "Triceps brachii lateral head",
+      "regiao_corporal": "triceps"
+    },
+    {
+      "slug": "triceps-braquial-porcao-medial",
+      "nome_pt": "Tríceps braquial porção medial",
+      "nome_en": "Triceps brachii medial head",
+      "regiao_corporal": "triceps"
+    },
+    {
+      "slug": "anconeo",
+      "nome_pt": "Ancôneo",
+      "nome_en": "Anconeus",
+      "regiao_corporal": "triceps"
+    },
+    {
+      "slug": "reto-do-abdome",
+      "nome_pt": "Reto do abdome",
+      "nome_en": "Rectus abdominis",
+      "regiao_corporal": "core-e-abdomen"
+    },
+    {
+      "slug": "obliquo-externo-do-abdome",
+      "nome_pt": "Oblíquo externo do abdome",
+      "nome_en": "External oblique",
+      "regiao_corporal": "core-e-abdomen"
+    },
+    {
+      "slug": "obliquo-interno-do-abdome",
+      "nome_pt": "Oblíquo interno do abdome",
+      "nome_en": "Internal oblique",
+      "regiao_corporal": "core-e-abdomen"
+    },
+    {
+      "slug": "transverso-do-abdome",
+      "nome_pt": "Transverso do abdome",
+      "nome_en": "Transverse abdominis",
+      "regiao_corporal": "core-e-abdomen"
+    },
+    {
+      "slug": "quadrado-lombar",
+      "nome_pt": "Quadrado lombar",
+      "nome_en": "Quadratus lumborum",
+      "regiao_corporal": "core-e-abdomen"
+    },
+    {
+      "slug": "multifideos",
+      "nome_pt": "Multífidos",
+      "nome_en": "Multifidus",
+      "regiao_corporal": "core-e-abdomen"
+    },
+    {
+      "slug": "diafragma",
+      "nome_pt": "Diafragma",
+      "nome_en": "Diaphragm",
+      "regiao_corporal": "core-e-abdomen"
+    },
+    {
+      "slug": "assoalho-pelvico",
+      "nome_pt": "Músculos do assoalho pélvico",
+      "nome_en": "Pelvic floor muscles",
+      "regiao_corporal": "core-e-abdomen"
+    },
+    {
+      "slug": "esternocleidomastoideo",
+      "nome_pt": "Esternocleidomastóideo",
+      "nome_en": "Sternocleidomastoid",
+      "regiao_corporal": "cervical"
+    },
+    {
+      "slug": "escalenos",
+      "nome_pt": "Escalenos",
+      "nome_en": "Scalenes",
+      "regiao_corporal": "cervical"
+    },
+    {
+      "slug": "esplenio-da-cabeca",
+      "nome_pt": "Esplênio da cabeça",
+      "nome_en": "Splenius capitis",
+      "regiao_corporal": "cervical"
+    },
+    {
+      "slug": "esplenio-do-cervical",
+      "nome_pt": "Esplênio do cervical",
+      "nome_en": "Splenius cervicis",
+      "regiao_corporal": "cervical"
+    },
+    {
+      "slug": "semiespinhal-da-cabeca",
+      "nome_pt": "Semiespinhal da cabeça",
+      "nome_en": "Semispinalis capitis",
+      "regiao_corporal": "cervical"
+    },
+    {
+      "slug": "longuissimo-do-cervical",
+      "nome_pt": "Longuíssimo do cervical",
+      "nome_en": "Longissimus cervicis",
+      "regiao_corporal": "cervical"
+    },
+    {
+      "slug": "longo-do-colo",
+      "nome_pt": "Longo do colo",
+      "nome_en": "Longus colli",
+      "regiao_corporal": "cervical"
+    }
+  ],
+  "equipamentos": [
+    {
+      "slug": "barra-olimpica",
+      "nome_pt": "Barra olímpica",
+      "nome_en": "Olympic barbell",
+      "categoria": "peso_livre"
+    },
+    {
+      "slug": "barra-w",
+      "nome_pt": "Barra W",
+      "nome_en": "EZ curl bar",
+      "categoria": "peso_livre"
+    },
+    {
+      "slug": "barra-hexagonal",
+      "nome_pt": "Barra hexagonal",
+      "nome_en": "Hex bar",
+      "categoria": "peso_livre"
+    },
+    {
+      "slug": "barra-reta-curta",
+      "nome_pt": "Barra reta curta",
+      "nome_en": "Short straight bar",
+      "categoria": "peso_livre"
+    },
+    {
+      "slug": "halteres",
+      "nome_pt": "Halteres",
+      "nome_en": "Dumbbells",
+      "categoria": "peso_livre"
+    },
+    {
+      "slug": "kettlebell",
+      "nome_pt": "Kettlebell",
+      "nome_en": "Kettlebell",
+      "categoria": "peso_livre"
+    },
+    {
+      "slug": "anilhas",
+      "nome_pt": "Anilhas",
+      "nome_en": "Weight plates",
+      "categoria": "peso_livre"
+    },
+    {
+      "slug": "disco-de-anilha",
+      "nome_pt": "Disco de anilha",
+      "nome_en": "Weight disc",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "smith",
+      "nome_pt": "Máquina Smith",
+      "nome_en": "Smith machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "hack-machine",
+      "nome_pt": "Hack machine",
+      "nome_en": "Hack squat machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "leg-press-45",
+      "nome_pt": "Leg press 45 graus",
+      "nome_en": "45-degree leg press",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "leg-press-horizontal",
+      "nome_pt": "Leg press horizontal",
+      "nome_en": "Horizontal leg press",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "cadeira-extensora",
+      "nome_pt": "Cadeira extensora",
+      "nome_en": "Leg extension machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "mesa-flexora",
+      "nome_pt": "Mesa flexora",
+      "nome_en": "Lying leg curl machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "cadeira-flexora",
+      "nome_pt": "Cadeira flexora",
+      "nome_en": "Seated leg curl machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "flexora-em-pe",
+      "nome_pt": "Flexora em pé",
+      "nome_en": "Standing leg curl machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "cadeira-abdutora",
+      "nome_pt": "Cadeira abdutora",
+      "nome_en": "Hip abduction machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "cadeira-adutora",
+      "nome_pt": "Cadeira adutora",
+      "nome_en": "Hip adduction machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "hip-thrust-machine",
+      "nome_pt": "Máquina de hip thrust",
+      "nome_en": "Hip thrust machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "maquina-de-gluteo-coice",
+      "nome_pt": "Máquina de glúteo (coice)",
+      "nome_en": "Glute kickback machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "panturrilha-em-pe",
+      "nome_pt": "Máquina de panturrilha em pé",
+      "nome_en": "Standing calf raise machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "panturrilha-sentado",
+      "nome_pt": "Máquina de panturrilha sentado",
+      "nome_en": "Seated calf raise machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "peck-deck",
+      "nome_pt": "Peck deck",
+      "nome_en": "Pec deck",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "chest-press-maquina",
+      "nome_pt": "Chest press máquina",
+      "nome_en": "Chest press machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "desenvolvimento-maquina",
+      "nome_pt": "Máquina de desenvolvimento",
+      "nome_en": "Shoulder press machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "remada-maquina-articulada",
+      "nome_pt": "Remada máquina articulada",
+      "nome_en": "Machine row",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "remada-cavalinho",
+      "nome_pt": "Remada cavalinho",
+      "nome_en": "T-bar row",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "graviton",
+      "nome_pt": "Graviton",
+      "nome_en": "Assisted pull-up and dip machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "maquina-abdominal",
+      "nome_pt": "Máquina abdominal",
+      "nome_en": "Abdominal crunch machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "maquina-lombar",
+      "nome_pt": "Máquina de extensão lombar",
+      "nome_en": "Back extension machine",
+      "categoria": "maquina"
+    },
+    {
+      "slug": "pulley",
+      "nome_pt": "Pulley (puxador alto)",
+      "nome_en": "Lat pulldown station",
+      "categoria": "cabo"
+    },
+    {
+      "slug": "polia-alta",
+      "nome_pt": "Polia alta",
+      "nome_en": "High pulley",
+      "categoria": "cabo"
+    },
+    {
+      "slug": "polia-baixa",
+      "nome_pt": "Polia baixa",
+      "nome_en": "Low pulley",
+      "categoria": "cabo"
+    },
+    {
+      "slug": "crossover",
+      "nome_pt": "Crossover",
+      "nome_en": "Cable crossover",
+      "categoria": "cabo"
+    },
+    {
+      "slug": "remada-baixa",
+      "nome_pt": "Remada baixa (estação sentada)",
+      "nome_en": "Seated cable row",
+      "categoria": "cabo"
+    },
+    {
+      "slug": "barra-fixa",
+      "nome_pt": "Barra fixa",
+      "nome_en": "Pull-up bar",
+      "categoria": "corporal"
+    },
+    {
+      "slug": "paralelas",
+      "nome_pt": "Paralelas",
+      "nome_en": "Dip bars",
+      "categoria": "corporal"
+    },
+    {
+      "slug": "trx",
+      "nome_pt": "TRX / fitas de suspensão",
+      "nome_en": "Suspension trainer",
+      "categoria": "corporal"
+    },
+    {
+      "slug": "peso-corporal",
+      "nome_pt": "Peso corporal",
+      "nome_en": "Bodyweight",
+      "categoria": "corporal"
+    },
+    {
+      "slug": "banco-reto",
+      "nome_pt": "Banco reto",
+      "nome_en": "Flat bench",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "banco-inclinado",
+      "nome_pt": "Banco inclinado",
+      "nome_en": "Incline bench",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "banco-declinado",
+      "nome_pt": "Banco declinado",
+      "nome_en": "Decline bench",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "banco-regulavel",
+      "nome_pt": "Banco regulável",
+      "nome_en": "Adjustable bench",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "banco-scott",
+      "nome_pt": "Banco Scott (escocês)",
+      "nome_en": "Preacher curl bench",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "banco-romano",
+      "nome_pt": "Banco romano 45 graus",
+      "nome_en": "45-degree hyperextension bench",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "cadeira-romana",
+      "nome_pt": "Cadeira romana",
+      "nome_en": "Captain's chair",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "ghd",
+      "nome_pt": "GHD (banco de flexão nórdica)",
+      "nome_en": "Glute-ham developer",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "rack-de-agachamento",
+      "nome_pt": "Rack de agachamento",
+      "nome_en": "Squat rack",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "bola-suica",
+      "nome_pt": "Bola suíça",
+      "nome_en": "Swiss ball",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "bosu",
+      "nome_pt": "Bosu",
+      "nome_en": "Bosu ball",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "caixa-plataforma",
+      "nome_pt": "Caixa / plataforma",
+      "nome_en": "Plyo box",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "step",
+      "nome_pt": "Step",
+      "nome_en": "Step platform",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "colchonete",
+      "nome_pt": "Colchonete",
+      "nome_en": "Exercise mat",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "cinto-de-lastro",
+      "nome_pt": "Cinto de lastro",
+      "nome_en": "Dip belt",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "corda-de-triceps",
+      "nome_pt": "Corda de tríceps",
+      "nome_en": "Rope attachment",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "puxador-barra-longa",
+      "nome_pt": "Puxador barra longa",
+      "nome_en": "Long lat bar attachment",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "puxador-triangulo",
+      "nome_pt": "Puxador triângulo",
+      "nome_en": "V-bar attachment",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "roda-abdominal",
+      "nome_pt": "Roda abdominal",
+      "nome_en": "Ab wheel",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "rolo-de-punho",
+      "nome_pt": "Rolo de punho",
+      "nome_en": "Wrist roller",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "hand-grip",
+      "nome_pt": "Hand grip",
+      "nome_en": "Hand gripper",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "cinta-cervical",
+      "nome_pt": "Cinta cervical",
+      "nome_en": "Head harness",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "caneleira",
+      "nome_pt": "Caneleira",
+      "nome_en": "Ankle weight",
+      "categoria": "acessorio"
+    },
+    {
+      "slug": "elastico-miniband",
+      "nome_pt": "Elástico miniband",
+      "nome_en": "Mini band",
+      "categoria": "elastico"
+    },
+    {
+      "slug": "faixa-de-resistencia",
+      "nome_pt": "Faixa de resistência",
+      "nome_en": "Resistance super band",
+      "categoria": "elastico"
+    },
+    {
+      "slug": "elastico-com-manoplas",
+      "nome_pt": "Elástico com manoplas",
+      "nome_en": "Tube band with handles",
+      "categoria": "elastico"
+    },
+    {
+      "slug": "treno",
+      "nome_pt": "Trenó",
+      "nome_en": "Sled",
+      "categoria": "implemento"
+    },
+    {
+      "slug": "medicine-ball",
+      "nome_pt": "Medicine ball",
+      "nome_en": "Medicine ball",
+      "categoria": "implemento"
+    },
+    {
+      "slug": "corda-naval",
+      "nome_pt": "Corda naval",
+      "nome_en": "Battle rope",
+      "categoria": "implemento"
+    },
+    {
+      "slug": "landmine",
+      "nome_pt": "Landmine",
+      "nome_en": "Landmine",
+      "categoria": "implemento"
+    },
+    {
+      "slug": "sandbag",
+      "nome_pt": "Sandbag (saco de areia)",
+      "nome_en": "Sandbag",
+      "categoria": "implemento"
+    },
+    {
+      "slug": "corda-de-pular",
+      "nome_pt": "Corda de pular",
+      "nome_en": "Jump rope",
+      "categoria": "implemento"
+    }
+  ],
+  "grupos_catalogo": [
+    {
+      "ordem": 1,
+      "slug": "agachamento-e-dominancia-de-joelho",
+      "nome_pt": "Agachamento e dominância de joelho"
+    },
+    {
+      "ordem": 2,
+      "slug": "afundos-passadas-e-step-ups",
+      "nome_pt": "Afundos, passadas e step-ups"
+    },
+    {
+      "ordem": 3,
+      "slug": "leg-press-e-extensao-de-joelho",
+      "nome_pt": "Leg press e extensão de joelho"
+    },
+    {
+      "ordem": 4,
+      "slug": "levantamentos-terra-e-dobradicas-de-quadril",
+      "nome_pt": "Levantamentos terra e dobradiças de quadril"
+    },
+    {
+      "ordem": 5,
+      "slug": "flexoes-de-joelho-e-posteriores-de-coxa",
+      "nome_pt": "Flexões de joelho e posteriores de coxa"
+    },
+    {
+      "ordem": 6,
+      "slug": "hip-thrust-pontes-e-extensoes-de-quadril",
+      "nome_pt": "Hip thrust, pontes e extensões de quadril"
+    },
+    {
+      "ordem": 7,
+      "slug": "abdutores-e-adutores",
+      "nome_pt": "Abdutores e adutores"
+    },
+    {
+      "ordem": 8,
+      "slug": "panturrilhas-e-tibial-anterior",
+      "nome_pt": "Panturrilhas e tibial anterior"
+    },
+    {
+      "ordem": 9,
+      "slug": "supinos-flexoes-mergulhos-e-crucifixos",
+      "nome_pt": "Supinos, flexões, mergulhos e crucifixos"
+    },
+    {
+      "ordem": 10,
+      "slug": "puxadas-verticais-e-barras-fixas",
+      "nome_pt": "Puxadas verticais e barras fixas"
+    },
+    {
+      "ordem": 11,
+      "slug": "remadas-horizontais",
+      "nome_pt": "Remadas horizontais"
+    },
+    {
+      "ordem": 12,
+      "slug": "trapezio-e-controle-escapular",
+      "nome_pt": "Trapézio e controle escapular"
+    },
+    {
+      "ordem": 13,
+      "slug": "desenvolvimentos-e-elevacoes-de-ombro",
+      "nome_pt": "Desenvolvimentos e elevações de ombro"
+    },
+    {
+      "ordem": 14,
+      "slug": "deltoide-posterior-e-manguito-rotador",
+      "nome_pt": "Deltoide posterior e manguito rotador"
+    },
+    {
+      "ordem": 15,
+      "slug": "biceps-triceps-antebracos-e-pegada",
+      "nome_pt": "Bíceps, tríceps, antebraços e pegada"
+    },
+    {
+      "ordem": 16,
+      "slug": "flexao-extensao-e-estabilizacao-do-core",
+      "nome_pt": "Flexão, extensão e estabilização do core"
+    },
+    {
+      "ordem": 17,
+      "slug": "anti-extensao-anti-rotacao-e-anti-flexao-lateral",
+      "nome_pt": "Anti-extensão, anti-rotação e anti-flexão lateral"
+    },
+    {
+      "ordem": 18,
+      "slug": "carries-e-carregadas",
+      "nome_pt": "Carries e carregadas"
+    },
+    {
+      "ordem": 19,
+      "slug": "levantamentos-olimpicos-e-exercicios-de-potencia",
+      "nome_pt": "Levantamentos olímpicos e exercícios de potência"
+    },
+    {
+      "ordem": 20,
+      "slug": "treno-medicine-ball-e-corda-naval",
+      "nome_pt": "Trenó, medicine ball e corda naval"
+    },
+    {
+      "ordem": 21,
+      "slug": "exercicios-cervicais",
+      "nome_pt": "Exercícios cervicais"
+    }
+  ],
+  "familias_substituicao": [
+    {
+      "slug": "agachamento-bilateral-livre",
+      "nome_pt": "Agachamento bilateral com carga axial livre",
+      "padrao_movimento": "agachamento",
+      "criterio": "Agachamentos bilaterais em cadeia fechada com carga axial livre sobre o tronco e alta exigência de estabilização."
+    },
+    {
+      "slug": "agachamento-bilateral-guiado",
+      "nome_pt": "Agachamento bilateral guiado",
+      "padrao_movimento": "agachamento",
+      "criterio": "Agachamentos bilaterais com trajetória guiada por máquina, reduzindo a demanda de equilíbrio e de estabilização do tronco."
+    },
+    {
+      "slug": "agachamento-carga-anterior",
+      "nome_pt": "Agachamento com carga anterior",
+      "padrao_movimento": "agachamento",
+      "criterio": "Agachamentos bilaterais com a carga posicionada à frente do tronco, aumentando a exigência de extensores torácicos e de quadríceps."
+    },
+    {
+      "slug": "agachamento-unilateral",
+      "nome_pt": "Agachamento unilateral com dominância de joelho",
+      "padrao_movimento": "agachamento",
+      "criterio": "Agachamentos em apoio unipodal sem base dividida, com dominância de joelho e estabilidade exigida muito alta."
+    },
+    {
+      "slug": "passada-base-dividida-estatica",
+      "nome_pt": "Passada em base dividida estática",
+      "padrao_movimento": "passada-unilateral",
+      "criterio": "Exercícios em base dividida sem deslocamento do pé, com a carga concentrada no membro anterior."
+    },
+    {
+      "slug": "passada-com-deslocamento",
+      "nome_pt": "Passada com deslocamento",
+      "padrao_movimento": "passada-unilateral",
+      "criterio": "Passadas com deslocamento do pé para frente, para trás ou em caminhada, somando desaceleração do membro anterior."
+    },
+    {
+      "slug": "subida-em-caixa",
+      "nome_pt": "Subida em caixa e step-up",
+      "padrao_movimento": "passada-unilateral",
+      "criterio": "Elevação do corpo em apoio unipodal sobre superfície elevada, com fase concêntrica dominante."
+    },
+    {
+      "slug": "passada-plano-frontal",
+      "nome_pt": "Passada e agachamento no plano frontal",
+      "padrao_movimento": "passada-unilateral",
+      "criterio": "Deslocamentos laterais ou diagonais em base dividida, com participação relevante de adutores e glúteo médio."
+    },
+    {
+      "slug": "leg-press-bilateral",
+      "nome_pt": "Leg press bilateral",
+      "padrao_movimento": "agachamento",
+      "criterio": "Empurrar bilateral de membros inferiores em cadeia fechada com tronco totalmente apoiado e trajetória guiada."
+    },
+    {
+      "slug": "leg-press-unilateral",
+      "nome_pt": "Leg press unilateral",
+      "padrao_movimento": "agachamento",
+      "criterio": "Empurrar unilateral de membros inferiores com tronco apoiado e trajetória guiada."
+    },
+    {
+      "slug": "extensao-de-joelho-sentado",
+      "nome_pt": "Extensão de joelho isolada sentado",
+      "padrao_movimento": "extensao-de-joelho",
+      "criterio": "Extensão de joelho monoarticular em cadeia aberta com quadril fletido e tronco apoiado."
+    },
+    {
+      "slug": "extensao-de-joelho-quadril-estendido",
+      "nome_pt": "Extensão de joelho com quadril estendido",
+      "padrao_movimento": "extensao-de-joelho",
+      "criterio": "Extensão de joelho com quadril neutro ou estendido, alongando o reto femoral e exigindo estabilização ativa do tronco."
+    },
+    {
+      "slug": "terra-do-solo-convencional",
+      "nome_pt": "Levantamento terra do solo com base convencional",
+      "padrao_movimento": "dobradica-de-quadril",
+      "criterio": "Dobradiça de quadril bilateral com a carga iniciando no solo e base na largura dos ombros."
+    },
+    {
+      "slug": "terra-do-solo-base-ampla",
+      "nome_pt": "Levantamento terra com base ampla",
+      "padrao_movimento": "dobradica-de-quadril",
+      "criterio": "Dobradiça de quadril bilateral com base ampla e rotação externa de quadril, aumentando a participação de adutores."
+    },
+    {
+      "slug": "dobradica-joelho-semi-estendido",
+      "nome_pt": "Dobradiça com joelho semi-estendido",
+      "padrao_movimento": "dobradica-de-quadril",
+      "criterio": "Dobradiça sem apoio da carga no solo e com joelho pouco flexionado, priorizando o alongamento ativo dos isquiotibiais."
+    },
+    {
+      "slug": "dobradica-unilateral",
+      "nome_pt": "Dobradiça de quadril unilateral",
+      "padrao_movimento": "dobradica-de-quadril",
+      "criterio": "Dobradiça em apoio unipodal com alta exigência de estabilidade frontal do quadril."
+    },
+    {
+      "slug": "dobradica-balistica",
+      "nome_pt": "Dobradiça balística",
+      "padrao_movimento": "dobradica-de-quadril",
+      "criterio": "Dobradiça executada de forma cíclica e balística, com ciclo alongamento-encurtamento e carga acelerada."
+    },
+    {
+      "slug": "flexao-de-joelho-decubito-ventral",
+      "nome_pt": "Flexão de joelho em decúbito ventral",
+      "padrao_movimento": "flexao-de-joelho",
+      "criterio": "Flexão de joelho monoarticular com quadril estendido e tronco apoiado em prono."
+    },
+    {
+      "slug": "flexao-de-joelho-sentado",
+      "nome_pt": "Flexão de joelho sentado",
+      "padrao_movimento": "flexao-de-joelho",
+      "criterio": "Flexão de joelho monoarticular com quadril fletido, aumentando o alongamento dos isquiotibiais."
+    },
+    {
+      "slug": "flexao-de-joelho-em-pe-unilateral",
+      "nome_pt": "Flexão de joelho em pé unilateral",
+      "padrao_movimento": "flexao-de-joelho",
+      "criterio": "Flexão de joelho monoarticular unilateral em posição ortostática com quadril neutro."
+    },
+    {
+      "slug": "flexao-de-joelho-peso-corporal",
+      "nome_pt": "Flexão de joelho com peso corporal",
+      "padrao_movimento": "flexao-de-joelho",
+      "criterio": "Flexão de joelho com o próprio corpo como resistência e ênfase excêntrica ou de cadeia fechada."
+    },
+    {
+      "slug": "hip-thrust-apoio-escapular",
+      "nome_pt": "Hip thrust com apoio escapular",
+      "padrao_movimento": "extensao-de-quadril",
+      "criterio": "Extensão de quadril em decúbito invertido com escápulas elevadas e vetor de resistência vertical sobre a pelve."
+    },
+    {
+      "slug": "ponte-de-gluteo-no-solo",
+      "nome_pt": "Ponte de glúteo no solo",
+      "padrao_movimento": "extensao-de-quadril",
+      "criterio": "Extensão de quadril em decúbito dorsal com tronco apoiado no solo e amplitude reduzida."
+    },
+    {
+      "slug": "ponte-de-gluteo-unilateral",
+      "nome_pt": "Ponte e hip thrust unilateral",
+      "padrao_movimento": "extensao-de-quadril",
+      "criterio": "Extensão de quadril em apoio unipodal com tronco apoiado e alta demanda de estabilização pélvica."
+    },
+    {
+      "slug": "extensao-de-quadril-quadrupedia",
+      "nome_pt": "Extensão de quadril em quadrupedia e coice na máquina",
+      "padrao_movimento": "extensao-de-quadril",
+      "criterio": "Extensão de quadril unilateral com tronco horizontal apoiado e ângulo de joelho fixo."
+    },
+    {
+      "slug": "extensao-de-quadril-em-pe-cabo",
+      "nome_pt": "Extensão de quadril em pé com cabo ou elástico",
+      "padrao_movimento": "extensao-de-quadril",
+      "criterio": "Extensão de quadril em pé contra resistência horizontal de cabo ou elástico, com tronco autoestabilizado."
+    },
+    {
+      "slug": "abducao-de-quadril-sentado",
+      "nome_pt": "Abdução de quadril sentado",
+      "padrao_movimento": "abducao-de-quadril",
+      "criterio": "Abdução de quadril monoarticular com quadril fletido e tronco apoiado."
+    },
+    {
+      "slug": "abducao-de-quadril-quadril-neutro",
+      "nome_pt": "Abdução de quadril com quadril neutro",
+      "padrao_movimento": "abducao-de-quadril",
+      "criterio": "Abdução de quadril monoarticular em decúbito lateral ou em pé, com quadril próximo da extensão neutra."
+    },
+    {
+      "slug": "aducao-de-quadril-resistida",
+      "nome_pt": "Adução de quadril resistida",
+      "padrao_movimento": "aducao-de-quadril",
+      "criterio": "Adução de quadril monoarticular dinâmica contra resistência de máquina, cabo ou elástico."
+    },
+    {
+      "slug": "aducao-de-quadril-isometrica",
+      "nome_pt": "Adução de quadril isométrica com peso corporal",
+      "padrao_movimento": "aducao-de-quadril",
+      "criterio": "Adução de quadril sustentada contra o peso corporal ou por compressão, com demanda isométrica dominante."
+    },
+    {
+      "slug": "flexao-plantar-joelho-estendido",
+      "nome_pt": "Flexão plantar com joelho estendido",
+      "padrao_movimento": "flexao-plantar",
+      "criterio": "Flexão plantar com joelho próximo da extensão completa, priorizando o gastrocnêmio."
+    },
+    {
+      "slug": "flexao-plantar-joelho-fletido",
+      "nome_pt": "Flexão plantar com joelho fletido",
+      "padrao_movimento": "flexao-plantar",
+      "criterio": "Flexão plantar com joelho fletido em torno de 90 graus, priorizando o sóleo."
+    },
+    {
+      "slug": "dorsiflexao-resistida",
+      "nome_pt": "Dorsiflexão resistida",
+      "padrao_movimento": "dorsiflexao",
+      "criterio": "Dorsiflexão de tornozelo contra resistência externa com o pé livre e a perna estabilizada."
+    },
+    {
+      "slug": "empurrar-horizontal-peitoral-medio",
+      "nome_pt": "Empurrar horizontal em banco horizontal",
+      "padrao_movimento": "empurrar-horizontal",
+      "criterio": "Empurrar horizontal bilateral com úmero perpendicular ao tronco, priorizando a porção esternal do peitoral maior."
+    },
+    {
+      "slug": "empurrar-horizontal-inclinado",
+      "nome_pt": "Empurrar horizontal em banco inclinado",
+      "padrao_movimento": "empurrar-horizontal",
+      "criterio": "Empurrar com tronco inclinado entre 30 e 45 graus, deslocando a ênfase para a porção clavicular do peitoral maior."
+    },
+    {
+      "slug": "empurrar-horizontal-declinado",
+      "nome_pt": "Empurrar horizontal em banco declinado",
+      "padrao_movimento": "empurrar-horizontal",
+      "criterio": "Empurrar com tronco declinado ou vetor descendente, priorizando as porções esternal inferior e abdominal do peitoral maior."
+    },
+    {
+      "slug": "empurrar-horizontal-peso-corporal",
+      "nome_pt": "Empurrar horizontal com peso corporal",
+      "padrao_movimento": "empurrar-horizontal",
+      "criterio": "Empurrar horizontal em cadeia fechada com o próprio corpo como resistência e demanda somada de anti-extensão."
+    },
+    {
+      "slug": "empurrar-horizontal-unilateral",
+      "nome_pt": "Empurrar horizontal unilateral",
+      "padrao_movimento": "empurrar-horizontal",
+      "criterio": "Empurrar horizontal com um membro por vez, somando exigência de anti-rotação de tronco."
+    },
+    {
+      "slug": "crucifixo-aducao-horizontal",
+      "nome_pt": "Crucifixo e adução horizontal de ombro",
+      "padrao_movimento": "empurrar-horizontal",
+      "criterio": "Adução horizontal de ombro monoarticular com ângulo de cotovelo fixo e peitoral maior como músculo primário."
+    },
+    {
+      "slug": "mergulho-tronco-vertical",
+      "nome_pt": "Mergulho em paralelas com tronco vertical",
+      "padrao_movimento": "empurrar-vertical",
+      "criterio": "Empurrar do próprio corpo com tronco próximo da vertical, priorizando tríceps e porção inferior do peitoral."
+    },
+    {
+      "slug": "puxada-vertical-pronada",
+      "nome_pt": "Puxada vertical com pegada pronada",
+      "padrao_movimento": "puxar-vertical",
+      "criterio": "Puxar vertical com antebraço pronado, priorizando latíssimo do dorso com maior contribuição escapular."
+    },
+    {
+      "slug": "puxada-vertical-supinada-neutra",
+      "nome_pt": "Puxada vertical com pegada supinada ou neutra",
+      "padrao_movimento": "puxar-vertical",
+      "criterio": "Puxar vertical com antebraço supinado ou neutro, aumentando a contribuição dos flexores de cotovelo."
+    },
+    {
+      "slug": "puxada-vertical-unilateral",
+      "nome_pt": "Puxada vertical unilateral",
+      "padrao_movimento": "puxar-vertical",
+      "criterio": "Puxar vertical com um membro por vez em cabo ou máquina, com controle escapular independente."
+    },
+    {
+      "slug": "puxada-braco-estendido",
+      "nome_pt": "Puxada com braço estendido",
+      "padrao_movimento": "depressao-escapular",
+      "criterio": "Extensão de ombro com cotovelo fixo e depressão escapular, isolando o latíssimo sem flexão de cotovelo."
+    },
+    {
+      "slug": "remada-tronco-apoiado",
+      "nome_pt": "Remada horizontal com tronco apoiado",
+      "padrao_movimento": "puxar-horizontal",
+      "criterio": "Puxar horizontal com tronco apoiado ou sentado, com baixa exigência isométrica de eretores da espinha."
+    },
+    {
+      "slug": "remada-tronco-livre",
+      "nome_pt": "Remada horizontal com tronco livre",
+      "padrao_movimento": "puxar-horizontal",
+      "criterio": "Puxar horizontal com tronco inclinado sem apoio, somando alta demanda isométrica de eretores e glúteos."
+    },
+    {
+      "slug": "remada-unilateral",
+      "nome_pt": "Remada horizontal unilateral",
+      "padrao_movimento": "puxar-horizontal",
+      "criterio": "Puxar horizontal com um membro por vez, com maior amplitude escapular e demanda de anti-rotação."
+    },
+    {
+      "slug": "remada-peso-corporal",
+      "nome_pt": "Remada horizontal com peso corporal",
+      "padrao_movimento": "puxar-horizontal",
+      "criterio": "Puxar horizontal em cadeia fechada com o corpo suspenso e pés apoiados, carga regulada pelo ângulo do tronco."
+    },
+    {
+      "slug": "encolhimento-de-ombros",
+      "nome_pt": "Encolhimento de ombros",
+      "padrao_movimento": "elevacao-escapular",
+      "criterio": "Elevação escapular monoarticular com braços pendentes e cotovelo estendido."
+    },
+    {
+      "slug": "remada-alta",
+      "nome_pt": "Remada alta",
+      "padrao_movimento": "elevacao-escapular",
+      "criterio": "Elevação escapular associada à abdução de ombro com cotovelo fletido acima da linha das mãos."
+    },
+    {
+      "slug": "retracao-escapular-isolada",
+      "nome_pt": "Retração escapular isolada",
+      "padrao_movimento": "retracao-escapular",
+      "criterio": "Retração e adução escapular com ângulo de cotovelo praticamente fixo e carga leve de controle."
+    },
+    {
+      "slug": "depressao-escapular-e-serratil",
+      "nome_pt": "Depressão escapular e controle do serrátil",
+      "padrao_movimento": "depressao-escapular",
+      "criterio": "Depressão escapular ou protração ativa do serrátil anterior sem movimento significativo de cotovelo."
+    },
+    {
+      "slug": "desenvolvimento-bilateral",
+      "nome_pt": "Desenvolvimento de ombro bilateral",
+      "padrao_movimento": "empurrar-vertical",
+      "criterio": "Empurrar vertical bilateral acima da cabeça com tronco estabilizado e cadência controlada."
+    },
+    {
+      "slug": "desenvolvimento-unilateral",
+      "nome_pt": "Desenvolvimento de ombro unilateral",
+      "padrao_movimento": "empurrar-vertical",
+      "criterio": "Empurrar vertical com um membro por vez, somando anti-flexão lateral e anti-rotação de tronco."
+    },
+    {
+      "slug": "empurrar-vertical-balistico",
+      "nome_pt": "Empurrar vertical balístico",
+      "padrao_movimento": "empurrar-vertical",
+      "criterio": "Empurrar vertical iniciado por impulso de membros inferiores, com aceleração balística da carga acima da cabeça."
+    },
+    {
+      "slug": "elevacao-lateral",
+      "nome_pt": "Elevação lateral de ombro",
+      "padrao_movimento": "abducao-de-ombro",
+      "criterio": "Abdução de ombro monoarticular no plano frontal ou escapular, com deltoide medial como músculo primário."
+    },
+    {
+      "slug": "elevacao-frontal",
+      "nome_pt": "Elevação frontal de ombro",
+      "padrao_movimento": "flexao-de-ombro",
+      "criterio": "Flexão de ombro monoarticular no plano sagital com cotovelo quase estendido, priorizando deltoide anterior."
+    },
+    {
+      "slug": "crucifixo-inverso-deltoide-posterior",
+      "nome_pt": "Crucifixo inverso e abdução horizontal de ombro",
+      "padrao_movimento": "puxar-horizontal",
+      "criterio": "Abdução horizontal de ombro com cotovelo semi-fixo e deltoide posterior como músculo primário."
+    },
+    {
+      "slug": "rotacao-externa-de-ombro-resistida",
+      "nome_pt": "Rotação externa de ombro resistida",
+      "padrao_movimento": "rotacao-externa-de-ombro",
+      "criterio": "Rotação externa monoarticular do ombro com carga leve, controle escapular e ângulo de abdução definido."
+    },
+    {
+      "slug": "rotacao-interna-de-ombro-resistida",
+      "nome_pt": "Rotação interna de ombro resistida",
+      "padrao_movimento": "rotacao-interna-de-ombro",
+      "criterio": "Rotação interna monoarticular do ombro com carga leve e subescapular como músculo primário."
+    },
+    {
+      "slug": "rosca-supinada",
+      "nome_pt": "Flexão de cotovelo supinada",
+      "padrao_movimento": "flexao-de-cotovelo",
+      "criterio": "Flexão de cotovelo com antebraço supinado e ombro em posição neutra ao lado do tronco."
+    },
+    {
+      "slug": "rosca-neutra-pronada",
+      "nome_pt": "Flexão de cotovelo neutra ou pronada",
+      "padrao_movimento": "flexao-de-cotovelo",
+      "criterio": "Flexão de cotovelo com antebraço neutro ou pronado, priorizando braquial e braquiorradial."
+    },
+    {
+      "slug": "rosca-ombro-estendido",
+      "nome_pt": "Flexão de cotovelo com ombro estendido",
+      "padrao_movimento": "flexao-de-cotovelo",
+      "criterio": "Flexão de cotovelo com o úmero atrás da linha do tronco, alongando a porção longa do bíceps."
+    },
+    {
+      "slug": "rosca-ombro-apoiado-a-frente",
+      "nome_pt": "Flexão de cotovelo com braço apoiado à frente",
+      "padrao_movimento": "flexao-de-cotovelo",
+      "criterio": "Flexão de cotovelo com úmero apoiado e ombro fletido, encurtando a porção longa do bíceps e eliminando o balanço."
+    },
+    {
+      "slug": "triceps-ombro-elevado",
+      "nome_pt": "Extensão de cotovelo com ombro elevado",
+      "padrao_movimento": "extensao-de-cotovelo",
+      "criterio": "Extensão de cotovelo com ombro fletido acima de 90 graus, alongando a porção longa do tríceps."
+    },
+    {
+      "slug": "triceps-ombro-neutro",
+      "nome_pt": "Extensão de cotovelo com ombro neutro ou estendido",
+      "padrao_movimento": "extensao-de-cotovelo",
+      "criterio": "Extensão de cotovelo com úmero junto ao tronco ou atrás dele, priorizando as porções lateral e medial."
+    },
+    {
+      "slug": "triceps-peso-corporal",
+      "nome_pt": "Extensão de cotovelo com peso corporal",
+      "padrao_movimento": "extensao-de-cotovelo",
+      "criterio": "Extensão de cotovelo em cadeia fechada usando o próprio corpo como resistência."
+    },
+    {
+      "slug": "punho-flexao-extensao",
+      "nome_pt": "Flexão e extensão de punho resistida",
+      "padrao_movimento": "flexao-extensao-de-punho",
+      "criterio": "Movimento isolado de punho ou de pronossupinação com antebraço apoiado e cotovelo fixo."
+    },
+    {
+      "slug": "preensao-sustentada",
+      "nome_pt": "Preensão manual sustentada",
+      "padrao_movimento": "preensao",
+      "criterio": "Exercícios em que a sustentação da pegada é o fator limitante, com demanda isométrica dos flexores dos dedos."
+    },
+    {
+      "slug": "flexao-de-tronco-solo",
+      "nome_pt": "Flexão de tronco no solo",
+      "padrao_movimento": "flexao-de-tronco",
+      "criterio": "Flexão da coluna com pelve relativamente fixa e resistência do peso corporal."
+    },
+    {
+      "slug": "flexao-de-tronco-com-carga",
+      "nome_pt": "Flexão de tronco com carga externa",
+      "padrao_movimento": "flexao-de-tronco",
+      "criterio": "Flexão da coluna contra resistência de cabo ou máquina, permitindo progressão objetiva de carga."
+    },
+    {
+      "slug": "flexao-de-tronco-pelve-movel",
+      "nome_pt": "Flexão de tronco com pelve móvel",
+      "padrao_movimento": "flexao-de-tronco",
+      "criterio": "Flexão da coluna iniciada pela retroversão pélvica com elevação dos membros inferiores."
+    },
+    {
+      "slug": "extensao-de-tronco-resistida",
+      "nome_pt": "Extensão de tronco resistida",
+      "padrao_movimento": "extensao-de-tronco",
+      "criterio": "Extensão da coluna toracolombar com tronco apoiado e resistência do peso corporal ou carga externa."
+    },
+    {
+      "slug": "rotacao-de-tronco-resistida",
+      "nome_pt": "Rotação de tronco resistida",
+      "padrao_movimento": "rotacao-de-tronco",
+      "criterio": "Rotação ativa do tronco no plano transverso contra resistência externa, com oblíquos como músculo primário."
+    },
+    {
+      "slug": "anti-extensao-isometrica",
+      "nome_pt": "Anti-extensão isométrica",
+      "padrao_movimento": "anti-extensao",
+      "criterio": "Sustentação isométrica que resiste à extensão lombar sem movimento significativo de tronco."
+    },
+    {
+      "slug": "anti-extensao-dinamica",
+      "nome_pt": "Anti-extensão dinâmica",
+      "padrao_movimento": "anti-extensao",
+      "criterio": "Aumento progressivo do braço de alavanca resistindo à extensão lombar por movimento dos membros."
+    },
+    {
+      "slug": "anti-rotacao-resistida",
+      "nome_pt": "Anti-rotação resistida",
+      "padrao_movimento": "anti-rotacao",
+      "criterio": "Resistência a torque rotacional externo mantendo pelve e caixa torácica alinhadas."
+    },
+    {
+      "slug": "anti-flexao-lateral-isometrica",
+      "nome_pt": "Anti-flexão lateral isométrica",
+      "padrao_movimento": "anti-flexao-lateral",
+      "criterio": "Sustentação isométrica que resiste à flexão lateral do tronco diante de carga ou apoio assimétrico."
+    },
+    {
+      "slug": "transporte-bilateral",
+      "nome_pt": "Transporte de carga bilateral",
+      "padrao_movimento": "transporte-carregado",
+      "criterio": "Locomoção com carga simétrica nas duas mãos, limitada por preensão e postura."
+    },
+    {
+      "slug": "transporte-unilateral",
+      "nome_pt": "Transporte de carga unilateral",
+      "padrao_movimento": "transporte-carregado",
+      "criterio": "Locomoção com carga em um único lado do corpo, exigindo anti-flexão lateral contínua."
+    },
+    {
+      "slug": "transporte-carga-elevada",
+      "nome_pt": "Transporte com carga elevada",
+      "padrao_movimento": "transporte-carregado",
+      "criterio": "Locomoção com carga acima da cabeça ou em rack frontal, com alta demanda de estabilização torácica e escapular."
+    },
+    {
+      "slug": "carregada-ate-o-rack",
+      "nome_pt": "Carregada até a posição de rack",
+      "padrao_movimento": "tripla-extensao",
+      "criterio": "Aceleração da carga do solo ou do quadril até o apoio nos ombros por tripla extensão, com recepção estruturada."
+    },
+    {
+      "slug": "arranco-e-puxada-alta",
+      "nome_pt": "Arranco e puxada alta",
+      "padrao_movimento": "tripla-extensao",
+      "criterio": "Aceleração da carga por tripla extensão até acima da cabeça ou até a puxada alta, sem apoio nos ombros."
+    },
+    {
+      "slug": "salto-vertical",
+      "nome_pt": "Salto vertical",
+      "padrao_movimento": "salto",
+      "criterio": "Projeção vertical do corpo com fase de voo e recepção controlada."
+    },
+    {
+      "slug": "salto-horizontal-e-lateral",
+      "nome_pt": "Salto horizontal e lateral",
+      "padrao_movimento": "salto",
+      "criterio": "Projeção do corpo com deslocamento nos planos sagital ou frontal e recepção em nova base."
+    },
+    {
+      "slug": "sprint-e-locomocao-resistida",
+      "nome_pt": "Sprint e locomoção resistida",
+      "padrao_movimento": "sprint-aceleracao",
+      "criterio": "Aceleração horizontal do corpo em velocidade máxima ou contra resistência externa de trenó, elástico ou arrasto."
+    },
+    {
+      "slug": "arremesso-rotacional",
+      "nome_pt": "Arremesso rotacional",
+      "padrao_movimento": "arremesso",
+      "criterio": "Lançamento de implemento com rotação de tronco e sequência proximal-distal no plano transverso."
+    },
+    {
+      "slug": "arremesso-vertical-e-frontal",
+      "nome_pt": "Arremesso vertical e frontal",
+      "padrao_movimento": "arremesso",
+      "criterio": "Lançamento de implemento nos vetores vertical ou frontal, sem rotação dominante de tronco."
+    },
+    {
+      "slug": "ondulacao-de-corda",
+      "nome_pt": "Ondulações com corda naval",
+      "padrao_movimento": "arremesso",
+      "criterio": "Movimento cíclico balístico dos membros superiores contra a inércia da corda, com métrica de tempo."
+    },
+    {
+      "slug": "flexao-cervical-resistida",
+      "nome_pt": "Flexão cervical resistida",
+      "padrao_movimento": "flexao-extensao-cervical",
+      "criterio": "Flexão do segmento cervical contra resistência manual, de cinta ou de carga livre."
+    },
+    {
+      "slug": "extensao-cervical-resistida",
+      "nome_pt": "Extensão cervical resistida",
+      "padrao_movimento": "flexao-extensao-cervical",
+      "criterio": "Extensão do segmento cervical contra resistência externa com tronco estabilizado."
+    },
+    {
+      "slug": "flexao-lateral-cervical-resistida",
+      "nome_pt": "Flexão lateral cervical resistida",
+      "padrao_movimento": "flexao-extensao-cervical",
+      "criterio": "Flexão lateral do segmento cervical contra resistência externa, sem rotação associada."
+    }
+  ]
+}
