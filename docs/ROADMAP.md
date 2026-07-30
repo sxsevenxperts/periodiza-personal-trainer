@@ -22,6 +22,8 @@ em `DIARIO_DE_BORDO.md`.
 - [x] Anotação "já prescrito" deixou de ficar obsoleta: adicionar um exercício agora re-executa a busca, e falhas do `addPrescriptionItem` passaram a exibir mensagem (`role="alert"`) em vez de falhar em silêncio.
 - [x] `aliases_pt` restaurado no resultado da busca: a RPC não os retornava, e a sidebar havia perdido a exibição dos apelidos — que é o que explica por que "hip thrust" traz "Elevação pélvica".
 - [x] `libc6-compat` adicionado no Dockerfile (Alpine usa musl; os binários nativos do SWC esperam glibc). Recomendação do Dockerfile oficial do Next.js, incluída porque o build não pode ser testado aqui.
+- [x] **Dockerfile aceita `SUPABASE_URL` / `SUPABASE_KEY` como alias** de `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`, que é a nomenclatura já publicada pelo EasyPanel. Resolução feita dentro de um `RUN` (semântica POSIX) gravando `.env.production`, em vez de depender de expansão aninhada no `ENV`.
+- [x] **Guarda contra vazamento da service_role**: como o alias `SUPABASE_KEY` é genérico, o Dockerfile decodifica o payload do JWT e aborta o build se o papel for `service_role` — que nunca pode ser inlinada num `NEXT_PUBLIC_*`.
 - [x] Código morto removido: query malformada de `microcycles` que disparava requisição inválida ao Supabase em todo carregamento da página de periodização.
 
 ### Já existia — registrado por engano como novo
@@ -32,7 +34,7 @@ em `DIARIO_DE_BORDO.md`.
 - Extensões `unaccent` e `pg_trgm` — migration **0001**.
 
 ### Em andamento
-- [ ] **Confirmar o primeiro build no EasyPanel.** O Dockerfile já está em `main`; falta um build verde. Se falhar, o erro agora será um erro real de build (antes era o arquivo ausente). Conferir também que `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` estão cadastrados como **build args** e que o proxy aponta para a porta 3000.
+- [ ] **Confirmar o primeiro build verde no EasyPanel.** O build de 30/07 15:36 já executou o Dockerfile e parou na guarda de variáveis (comportamento correto, pois os build args vinham como `SUPABASE_URL`/`SUPABASE_KEY`). O Dockerfile passou a aceitar esses nomes como alias, então o próximo build deve avançar. Falta um build concluído.
 - [ ] **CRÍTICO — aplicar a migration 0010 no Supabase.** Sem ela a RPC `search_exercises()` não existe. Passo a passo em `docs/MIGRATIONS.md`.
 - [ ] Impor o teto de abas conforme o `split` da periodização e bloquear a 8ª sessão (a UI hoje lista as sessões existentes, sem validar o limite).
 - [ ] **Remover o fallback de busca** em `searchExercises()` depois de aplicar a 0010. Hoje, se a RPC não existir, a busca cai em `ilike` para não derrubar a tela — comportamento degradado e temporário, sinalizado no log do servidor e (em dev) na própria sidebar.

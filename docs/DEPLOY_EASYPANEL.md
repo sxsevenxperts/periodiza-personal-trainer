@@ -31,27 +31,46 @@ oficial do Next.js.
 
 ---
 
-## Segundo problema: nomes das variáveis de ambiente
+## Nomes das variáveis de ambiente
 
-O log do build mostrava estes build args sendo passados:
+O EasyPanel publica estes build args para os serviços do projeto:
 
 ```
 --build-arg 'SUPABASE_URL=...'
 --build-arg 'SUPABASE_KEY=...'
 ```
 
-Esses nomes **não funcionam**. `lib/env.ts` valida com zod exatamente:
+O app, porém, lê `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+(validados por `lib/env.ts` com zod). Além disso, variáveis `NEXT_PUBLIC_*` são
+resolvidas pelo Next **durante o build** — passá-las só como env de runtime não
+basta.
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+**O Dockerfile aceita os dois conjuntos de nomes.** Um passo de resolução no
+estágio `builder` monta `.env.production` a partir do que estiver disponível:
 
-e lança erro se faltarem. Além disso, variáveis `NEXT_PUBLIC_*` são inlinadas
-pelo Next no bundle do browser **durante o build** — passá-las só como env de
-runtime gera um bundle cliente quebrado, mesmo que o container suba.
+| Preenchido | Usado |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | ele |
+| só `SUPABASE_URL` | ele, como alias |
+| ambos | `NEXT_PUBLIC_*` tem precedência |
+| nenhum | build falha com mensagem explícita |
 
-Por isso o `Dockerfile` as declara como `ARG` e **falha o build cedo**, com
-mensagem clara, se vierem vazias — em vez de publicar uma imagem que só quebra
-no navegador do usuário.
+Assim o deploy funciona com a configuração que o EasyPanel já tem, sem exigir
+renomeação. Cadastrar os nomes `NEXT_PUBLIC_*` continua sendo o mais explícito,
+mas deixou de ser obrigatório.
+
+### Guarda de segurança
+
+`SUPABASE_KEY` é um nome genérico, e apontá-lo para a **service_role** exporia
+o segredo — qualquer `NEXT_PUBLIC_*` pode acabar no bundle do browser. O
+Dockerfile decodifica o payload do JWT e **aborta o build** se o papel for
+`service_role`, com mensagem pedindo a chave anon.
+
+### Por que a resolução acontece dentro de um `RUN`
+
+Um `ENV VAR=${OUTRA:-$TERCEIRA}` dependeria da expansão aninhada do parser do
+Dockerfile. Fazer no `RUN` usa apenas semântica POSIX de shell, que é
+previsível. O resultado vai para `.env.production`, lido pelo `next build`.
 
 ---
 
@@ -59,12 +78,15 @@ no navegador do usuário.
 
 ### 1. Build args (aba de Build / Environment do serviço)
 
-Cadastre com estes nomes exatos:
+Qualquer um dos dois conjuntos serve:
 
 | Nome | Valor |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | URL do Supabase (ex.: `https://<host>`) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | chave anon do projeto |
+| `NEXT_PUBLIC_SUPABASE_URL` *ou* `SUPABASE_URL` | URL do Supabase (ex.: `https://<host>`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` *ou* `SUPABASE_KEY` | chave **anon** do projeto |
+
+⚠️ A chave precisa ser a **anon**. Se for a service_role, o build aborta de
+propósito.
 
 ### 2. Variáveis de runtime
 
@@ -94,6 +116,8 @@ Dispare um novo deploy. O build agora encontra o `Dockerfile` na raiz do repo.
 | `npm run build` | executado localmente | sucesso, 11/11 páginas |
 | `output: standalone` gera `server.js` | `ls .next/standalone/server.js` | existe |
 | Server standalone sobe e responde | `node server.js` + `curl` | HTTP 200 em `/` e `/login` |
+| `next build` lê `.env.production` | build com as vars removidas do ambiente | sucesso, valor inlinado nos bundles |
+| resolução de aliases | script executado nos 4 cenários | alias usado, precedência correta, ausência falha, service_role bloqueada |
 
 **Não verificado neste ambiente:** o `docker build` em si — o sandbox de
 desenvolvimento não tem daemon Docker. O que o Dockerfile depende (saída

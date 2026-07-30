@@ -30,19 +30,50 @@ RUN apk add --no-cache libc6-compat
 
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# Falha o build cedo, com mensagem clara, em vez de gerar um bundle quebrado
-# que so estoura no browser do usuario.
-RUN test -n "$NEXT_PUBLIC_SUPABASE_URL" \
- || (echo "ERRO: build arg NEXT_PUBLIC_SUPABASE_URL ausente." && exit 1)
-RUN test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
- || (echo "ERRO: build arg NEXT_PUBLIC_SUPABASE_ANON_KEY ausente." && exit 1)
+# Aliases aceitos por compatibilidade com a configuracao existente do EasyPanel,
+# que ja publica estes nomes para os servicos do mesmo projeto. Os nomes
+# NEXT_PUBLIC_* tem precedencia quando ambos vierem preenchidos.
+ARG SUPABASE_URL
+ARG SUPABASE_KEY
 
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Resolve os nomes, valida e grava .env.production — que o `next build` le.
+#
+# A resolucao acontece dentro de um RUN, e nao num ENV com ${VAR:-$OUTRA},
+# para depender so de semantica POSIX de shell em vez de expansao aninhada do
+# parser do Dockerfile.
+#
+# A guarda de service_role existe porque toda variavel NEXT_PUBLIC_* pode ser
+# inlinada no bundle do browser (hoje so o codigo de servidor a consome, mas
+# lib/supabase/client.ts a usaria no primeiro componente cliente). Como
+# SUPABASE_KEY e um nome generico, alguem pode aponta-lo para a service_role
+# sem perceber e expor o segredo a todos os visitantes. O papel fica no payload
+# do JWT — se for service_role, o build para aqui.
+RUN set -e; \
+    url="${NEXT_PUBLIC_SUPABASE_URL:-$SUPABASE_URL}"; \
+    key="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-$SUPABASE_KEY}"; \
+    if [ -z "$url" ]; then \
+      echo "ERRO: informe NEXT_PUBLIC_SUPABASE_URL (ou SUPABASE_URL) como build arg."; \
+      exit 1; \
+    fi; \
+    if [ -z "$key" ]; then \
+      echo "ERRO: informe NEXT_PUBLIC_SUPABASE_ANON_KEY (ou SUPABASE_KEY) como build arg."; \
+      exit 1; \
+    fi; \
+    payload=$(printf '%s' "$key" | cut -d. -f2); \
+    case $((${#payload} % 4)) in 2) payload="${payload}==";; 3) payload="${payload}=";; esac; \
+    if printf '%s' "$payload" | base64 -d 2>/dev/null | grep -q 'service_role'; then \
+      echo "ERRO: a chave informada e a service_role, que nunca pode ir ao browser."; \
+      echo "      Use a chave ANON do projeto Supabase."; \
+      exit 1; \
+    fi; \
+    printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n'      "$url" >  .env.production; \
+    printf 'NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$key" >> .env.production
+
 RUN npm run build
 
 # ---------------------------------------------------------------------------
