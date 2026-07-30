@@ -10,35 +10,87 @@ numérica. O deploy do app **não** as executa — é um passo manual.
 | 0001 – 0009 | sim (schema em uso) |
 | 0010 | **não** — pendente |
 
+> ⚠️ **Verificação de 30/07:** `https://xpert-backend-supabase.qfotry.easypanel.host`
+> respondeu **404 em todas as rotas testadas** (`/`, `/rest/v1/`, `/auth/v1/health`),
+> com uma página HTML genérica de "Not Found" — não com o formato de erro do
+> PostgREST. As portas 5432 e 6543 também não responderam.
+>
+> Ou seja: nesse endereço não há uma API do Supabase atendendo. Antes de aplicar
+> a migration, confirme no EasyPanel qual é a URL pública correta do serviço
+> Supabase (a que serve `/rest/v1/`) e se ele está em execução. O mesmo endereço
+> é o que o app usa em `NEXT_PUBLIC_SUPABASE_URL` — se estiver errado, o deploy
+> sobe mas nenhuma tela carrega dados.
+
 ## Aplicar a 0010
 
+### Caminho recomendado — um comando
+
 ```bash
-psql "postgresql://postgres:<SUPABASE_DB_PASSWORD>@<host>:5432/postgres" \
+export SUPABASE_DB_URL="postgresql://postgres:SENHA@HOST:5432/postgres"
+npm run db:migrate
+```
+
+A senha é a de `SUPABASE_DB_PASSWORD` (veja `.env.example`). A variável é lida
+do ambiente, **nunca** passada como argumento — assim não fica no histórico do
+shell nem visível na lista de processos.
+
+O comando aplica a migration e roda a verificação sozinho:
+
+```
+Aplicando 0010_session_label_and_search.sql...
+Migration aplicada.
+
+Verificando...
+  CHECK constraints de domínio                   OK
+  coluna restricted_movement_patterns            OK
+  RPC search_exercises (1 assinatura)            OK
+  search_vector preenchido em todo o catálogo    OK
+  busca por 'agachamento' retorna                OK (1 resultado(s))
+
+Tudo certo. A busca contextual está ativa.
+```
+
+Se alguma verificação falhar, o comando sai com código diferente de zero e diz
+qual falhou. A migration é **idempotente** — reaplicar não causa erro.
+
+Para outra migration: `npm run db:migrate -- supabase/migrations/0011_x.sql`
+
+### Caminho manual — psql direto
+
+```bash
+psql "postgresql://postgres:SENHA@HOST:5432/postgres" \
   -v ON_ERROR_STOP=1 \
   -f supabase/migrations/0010_session_label_and_search.sql
 ```
 
-Use a senha de `SUPABASE_DB_PASSWORD` (veja `.env.example`). Não cole
-credenciais em scripts versionados.
+### Caminho sem acesso à porta 5432
 
-A migration é **idempotente** — reaplicar não causa erro.
+Se o Postgres não estiver exposto (comum em Supabase self-hosted atrás de
+proxy), use o **SQL Editor do Supabase Studio**: abra o arquivo
+`supabase/migrations/0010_session_label_and_search.sql`, cole o conteúdo inteiro
+e execute. Depois rode as consultas de verificação abaixo.
 
-### Verificar depois de aplicar
+### Verificar manualmente
 
 ```sql
--- CHECK constraints de dominio
-select conname from pg_constraint
+-- CHECK constraints de dominio  → esperado: 2
+select count(*) from pg_constraint
  where conname in ('sessions_label_check','periodizations_split_check');
--- esperado: as duas linhas
 
--- search_vector preenchido em todo o catalogo
-select count(*) as sem_vector from exercises where search_vector is null;
--- esperado: 0
+-- coluna da anamnese  → esperado: 1
+select count(*) from information_schema.columns
+ where table_name='client_anamnesis' and column_name='restricted_movement_patterns';
 
--- RPC responde
+-- RPC registrada  → esperado: 1
+select count(*) from pg_proc where proname='search_exercises';
+
+-- search_vector preenchido  → esperado: 0
+select count(*) from exercises where search_vector is null;
+
+-- busca funciona  → esperado: pelo menos 1 linha
 select out_name_pt from search_exercises('agachamento') limit 5;
 
--- RPC com o contexto do aluno (anotacoes preenchidas)
+-- contexto do aluno (anotacoes preenchidas)
 select out_name_pt, out_has_restriction, out_missing_equipment
   from search_exercises('', p_client_id => '<uuid-do-aluno>');
 ```

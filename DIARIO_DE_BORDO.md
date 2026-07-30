@@ -1,5 +1,112 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Tentativa de aplicar a migration 0010; ferramenta criada e endpoint do Supabase inacessível
+
+### Objetivo
+Aplicar a migration 0010 no Supabase remoto, pendência crítica que mantém a
+busca contextual desligada.
+
+### Resultado: não foi possível aplicar daqui
+
+Três bloqueios independentes, todos verificados:
+
+1. **Sem credenciais.** Não há `.env` no repositório nem variáveis de banco
+   definidas no ambiente da sessão. A senha de `SUPABASE_DB_PASSWORD` é
+   necessária e não está disponível.
+2. **Portas do Postgres fechadas.** `5432` e `6543` em
+   `xpert-backend-supabase.qfotry.easypanel.host` não respondem — o proxy de
+   saída do ambiente só libera HTTPS. `psql` é impossível daqui.
+3. **O endpoint HTTPS não serve uma API Supabase.** Requisições a `/`,
+   `/rest/v1/` e `/auth/v1/health` devolveram **404** com uma página HTML
+   genérica de "Not Found". Uma chamada à RPC devolveu
+   `{"message":"Route POST:/api/errors/not-found not found","statusCode":404}` —
+   formato de outro serviço, não do PostgREST, que responderia
+   `{"code":"PGRST202",...}`.
+
+Descartei que fosse bloqueio do proxy local: `__agentproxy/status` reporta
+`selective: false` e `recentRelayFailures: []`, ou seja, as requisições
+chegaram ao destino e os 404 são respostas reais do host.
+
+**Consequência que extrapola a migration:** esse mesmo endereço é o que o app
+usa em `NEXT_PUBLIC_SUPABASE_URL`. Se ele não serve o Supabase, o deploy vai
+subir e nenhuma tela carregará dados. Registrado como item crítico no roadmap.
+
+### Alterações realizadas
+
+**`scripts/apply-migration.sh` (novo) + `npm run db:migrate`**
+- Aplica uma migration e roda 5 verificações automáticas: CHECK constraints,
+  coluna `restricted_movement_patterns`, RPC registrada com assinatura única,
+  `search_vector` sem nulos e busca retornando resultado.
+- Conexão lida de `SUPABASE_DB_URL` (ou `DATABASE_URL`) **no ambiente**, nunca
+  como argumento — senha não vai para o histórico do shell nem para a lista de
+  processos.
+- Erros tratados: variável ausente, arquivo inexistente, `psql` não instalado,
+  falha na aplicação (com `ON_ERROR_STOP`), verificação reprovada (sai != 0).
+- Aceita outra migration por argumento: `npm run db:migrate -- caminho.sql`.
+
+**`docs/MIGRATIONS.md`**
+- Runbook reescrito com três caminhos: o comando único, o `psql` manual e o SQL
+  Editor do Studio (para quando a porta 5432 não estiver exposta — que é
+  exatamente o caso aqui).
+- Consultas de verificação manual com o valor esperado de cada uma.
+- Aviso no topo com o achado do endpoint 404.
+
+### Decisões técnicas
+- **Script em vez de instruções**: o passo vinha sendo descrito em prosa e
+  seguia sem ser feito. Um comando que aplica e confere reduz o atrito e remove
+  a chance de aplicar sem verificar.
+- **Conexão só por variável de ambiente**: passar a senha como argumento a
+  deixaria no `history` e visível em `ps`.
+- **Verificação embutida**: aplicar sem conferir foi o padrão que gerou os
+  registros falsos auditados hoje de manhã. O script fecha essa porta.
+- **Documentar o caminho do Studio**: dado que a porta 5432 não responde, o SQL
+  Editor pode ser a única via viável — melhor documentar do que deixar o leitor
+  sem saída.
+
+### Validações executadas
+
+Script testado ponta a ponta contra **PostgreSQL 16 real** (instância
+temporária, migrations 0001–0009 aplicadas antes):
+
+| Cenário | Resultado |
+|---|---|
+| aplicação em banco limpo | migration aplicada, 5/5 verificações OK |
+| reaplicação (idempotência) | aplicada de novo, 5/5 OK |
+| sem `SUPABASE_DB_URL` | erro claro com instrução de uso, sai != 0 |
+| migration inexistente | erro claro, sai != 0 |
+| verificação com expectativa errada | acusa `FALHOU` e contabiliza a falha |
+
+| Comando | Resultado |
+|---|---|
+| `bash -n scripts/apply-migration.sh` | sintaxe OK |
+| `npx tsc --noEmit` | 0 erros |
+| `npm run lint` | 0 erros, 0 avisos |
+
+Conectividade verificada: HTTPS alcança o host (404 em todas as rotas), portas
+5432 e 6543 sem resposta, proxy local sem falhas de relay.
+
+**Não verificado:** a migration continua **não aplicada** no banco de produção.
+
+### Impactos
+- **Operacional**: aplicar a 0010 passa de procedimento manual em várias etapas
+  para um comando que confere o próprio resultado.
+- **Negócio**: sem endpoint acessível, a busca contextual segue desligada e o
+  app pode subir sem conseguir falar com o banco.
+
+### Pendências
+- **Confirmar a URL pública do Supabase no EasyPanel** — bloqueia tanto a
+  migration quanto o funcionamento do app.
+- Aplicar a 0010 com `npm run db:migrate` assim que houver acesso.
+- Rotacionar `GROQ_API_KEY` e a chave anon.
+- Remover o fallback `ilike` após aplicar a 0010.
+- Nenhum teste automatizado no projeto.
+
+### Arquivos principais envolvidos
+- `scripts/apply-migration.sh`, `package.json`
+- `docs/MIGRATIONS.md`, `docs/ROADMAP.md`
+
+---
+
 ## 2026-07-30 — Dockerfile aceita a nomenclatura do EasyPanel; guarda contra service_role
 
 ### Objetivo
