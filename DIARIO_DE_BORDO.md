@@ -1,5 +1,85 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Correção do diagnóstico: não há serviço publicado no domínio do Supabase
+
+### Objetivo
+Descobrir por conta própria o endpoint correto da API do Supabase, em vez de
+depender de o usuário localizá-lo no painel.
+
+### Método
+O padrão de hostname do EasyPanel é `<projeto>-<serviço>.<id>.easypanel.host`.
+Com o sufixo conhecido (`qfotry`) e os projetos conhecidos (`xpert-backend`,
+`startups`), sondei os nomes plausíveis do gateway.
+
+1. **DNS não distingue nada.** Todos os candidatos resolvem para
+   `164.68.116.21` — o domínio é wildcard. Resolver não prova que o serviço
+   exista.
+2. **HTTP também parecia não distinguir**: todos devolviam o mesmo 404 em HTML,
+   inclusive nomes que certamente não existem (`xpert-backend-api`).
+3. **O teste decisivo** foi comparar o corpo da resposta com o de um hostname
+   deliberadamente inventado:
+
+| Hostname | md5 do corpo |
+|---|---|
+| `nao-existe-xyz-9a8b7c` | `9d0e48091c0d` |
+| `xpert-backend-supabase` | `9d0e48091c0d` |
+| `startups-periodizacao` | `2b77172b2b7b` |
+
+### Correção do diagnóstico anterior
+Na entrada anterior registrei que o domínio estaria "roteado para outro serviço
+da stack, provavelmente o Studio". **Isso estava errado.**
+
+O domínio do Supabase devolve a página catch-all do proxy — byte a byte igual à
+de um nome inventado. Não há serviço vinculado a ele. O Supabase está parado,
+foi removido, ou o domínio nunca foi associado.
+
+O contraste confirma a leitura: o domínio do app (`startups-periodizacao`)
+responde **502**, com corpo diferente — ali existe vínculo, mas o container não
+sobe, coerente com o build ainda não ter concluído.
+
+### Alterações realizadas
+- `docs/MIGRATIONS.md`: bloco de diagnóstico substituído pela conclusão correta,
+  com a tabela de md5 como evidência; passos no painel reescritos começando por
+  "confirme se o serviço existe e está em execução"; tabela de interpretação do
+  `curl` ganhou a linha do 502.
+- `docs/ROADMAP.md`: item crítico reescrito, marcando explicitamente que a
+  hipótese anterior estava errada.
+
+### Decisões técnicas
+- **Comparar hash com um hostname inventado**: foi o que separou "serviço
+  errado" de "serviço nenhum". Sem esse controle, os 404 pareciam indicar
+  roteamento equivocado — e foi assim que errei antes.
+- **Sondagem limitada a nomes plausíveis** do projeto conhecido, sem enumeração
+  ampla. Infraestrutura do próprio usuário, a pedido dele, com escopo mínimo.
+- **Não tentei autenticar no painel** — interface administrativa.
+
+### Validações executadas
+- 12 hostnames candidatos: resolução DNS verificada (todos wildcard).
+- 9 candidatos testados em `/rest/v1/` por HTTPS: todos com o mesmo 404 HTML.
+- Comparação de md5 do corpo entre host inventado, domínio do Supabase e
+  domínio do app.
+- Domínio do app testado em `/` e `/rest/v1/`: 502 em ambos.
+
+Nenhuma alteração de código; apenas documentação.
+
+### Impactos
+- **Operacional**: a ação deixa de ser "reapontar o domínio" e passa a ser
+  "verificar se o serviço Supabase existe e está no ar" — ordem diferente,
+  ponto de partida diferente.
+- **Confiabilidade do registro**: uma hipótese errada minha ficou registrada e
+  foi corrigida com evidência, não substituída em silêncio.
+
+### Pendências
+- Confirmar no painel se o serviço Supabase existe e está em execução.
+- Obter a URL do gateway Kong (porta 8000) e usá-la em `NEXT_PUBLIC_SUPABASE_URL`.
+- Aplicar a 0010 (`npm run db:migrate`) quando houver acesso.
+- Rotacionar `GROQ_API_KEY` e a chave anon.
+
+### Arquivos principais envolvidos
+- `docs/MIGRATIONS.md`, `docs/ROADMAP.md`
+
+---
+
 ## 2026-07-30 — Diagnóstico do endpoint do Supabase: roteamento, não DNS
 
 ### Objetivo

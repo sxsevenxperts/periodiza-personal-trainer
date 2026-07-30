@@ -10,36 +10,44 @@ numérica. O deploy do app **não** as executa — é um passo manual.
 | 0001 – 0009 | sim (schema em uso) |
 | 0010 | **não** — pendente |
 
-> ⚠️ **Diagnóstico de 30/07 — a API do Supabase não está sendo servida.**
+> ⚠️ **Diagnóstico de 30/07 — nenhum serviço publicado no domínio do Supabase.**
 >
-> `https://xpert-backend-supabase.qfotry.easypanel.host` devolveu **404 em
-> todas as rotas** (`/`, `/rest/v1/`, `/auth/v1/health`), com página HTML
-> genérica em vez do formato de erro do PostgREST. As portas 5432 e 6543
-> também não responderam.
+> `xpert-backend-supabase.qfotry.easypanel.host` devolve a **mesma resposta,
+> byte a byte, que um hostname inexistente**:
 >
-> **Não é problema de DNS nem de host.** O nome resolve para `164.68.116.21`,
-> o mesmo servidor do painel do EasyPanel — a requisição chega ao destino
-> certo e recebe um 404 real.
+> | Hostname | md5 do corpo |
+> |---|---|
+> | `nao-existe-xyz-9a8b7c` (inventado) | `9d0e48091c0d` |
+> | `xpert-backend-supabase` | `9d0e48091c0d` |
+> | `startups-periodizacao` (o app) | `2b77172b2b7b` |
 >
-> **Causa provável:** em Supabase self-hosted, quem serve `/rest/v1/`,
-> `/auth/v1/` e `/storage/v1/` é o gateway **Kong** (porta `8000`). Um 404 em
-> HTML indica que o domínio está roteado para outro serviço da stack — o
-> Studio, por exemplo — e não para o Kong.
+> O DNS é wildcard (`*.qfotry.easypanel.host` → `164.68.116.21`), então
+> qualquer nome resolve — resolver não prova que exista serviço. O que prova é
+> a resposta: o domínio do Supabase cai na **página catch-all** do proxy, igual
+> a um nome inventado.
 >
-> Ver "Descobrir a URL correta da API" abaixo.
+> **Conclusão:** não há serviço vinculado a esse domínio. O Supabase está
+> parado, foi removido, ou o domínio nunca foi associado a ele. Não é
+> roteamento para o serviço errado.
+>
+> Para comparação, o domínio do app responde **502** — ali existe vínculo, mas
+> o container não sobe (coerente com o build ainda não ter concluído).
 
 ---
 
 ## Descobrir a URL correta da API do Supabase
 
-No painel do EasyPanel, dentro do projeto que hospeda o Supabase:
+Como não há nada publicado no domínio conhecido, o primeiro passo é no painel
+do EasyPanel:
 
-1. Localize o serviço do **gateway da API** — costuma se chamar `kong`,
-   `supabase-kong` ou similar, e expõe a porta **8000**. Não confunda com
-   `studio` (interface web), `rest` (PostgREST interno) ou `db` (Postgres).
-2. Abra a aba de **Domains / Proxy** desse serviço e veja qual domínio público
-   está mapeado para a porta 8000.
-3. Esse domínio é o valor de `NEXT_PUBLIC_SUPABASE_URL`.
+1. Confirme se o serviço do **Supabase ainda existe** e está **em execução**.
+2. Identifique o serviço do **gateway da API** — costuma se chamar `kong` ou
+   `supabase-kong` e expõe a porta **8000**. É ele que serve `/rest/v1/`,
+   `/auth/v1/` e `/storage/v1/`. Não confunda com `studio` (interface web),
+   `rest` (PostgREST interno) ou `db` (Postgres).
+3. Na aba **Domains** desse serviço, verifique se há domínio público apontando
+   para a porta 8000. Se não houver, crie.
+4. Esse domínio é o valor de `NEXT_PUBLIC_SUPABASE_URL`.
 
 ### Confirmar que a URL está certa
 
@@ -51,11 +59,11 @@ curl -i "https://<URL-DO-KONG>/rest/v1/" -H "apikey: <chave-anon>"
 |---|---|
 | `HTTP 200` com JSON (OpenAPI) | ✅ é a URL correta |
 | `HTTP 401` com `{"message":"No API key found..."}` | ✅ é o Kong; só faltou a chave |
-| `HTTP 404` com HTML | ❌ domínio apontando para o serviço errado |
+| `HTTP 404` com HTML | ❌ nenhum serviço vinculado a esse domínio |
+| `HTTP 502` | domínio vinculado, mas o container não responde |
 
-O mesmo endereço serve para a aplicação e para o SQL Editor do Studio. Se o
-Postgres (5432) não estiver exposto publicamente — que é o caso aqui — o Studio
-passa a ser o caminho para aplicar a migration.
+Se o Postgres (5432) não estiver exposto publicamente — que é o caso aqui — o
+SQL Editor do Studio passa a ser o caminho para aplicar a migration.
 
 ---
 
