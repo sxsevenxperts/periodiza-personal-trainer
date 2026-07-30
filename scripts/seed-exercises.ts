@@ -31,7 +31,8 @@ async function main() {
   const mapEquip = Object.fromEntries(equips!.map(m => [m.slug, m.id]));
   for (const m of equips!) { mapEquip[slugify(m.name_pt)] = m.id; }
 
-  const catalogStr = await readFile('data/catalog.json', 'utf8');
+  const filePath = process.argv[2] || 'data/catalog.json';
+  const catalogStr = await readFile(filePath, 'utf8');
   const catalog = JSON.parse(catalogStr);
 
   const rows = [];

@@ -109,3 +109,28 @@ export async function searchExercises(query: string) {
 
   return { data }
 }
+
+export async function updatePrescriptionOrder(items: { id: string; order_index: number; session_id: string }[]) {
+  const supabase = (await criarClienteServidor()) as any
+
+  // Para garantir o RLS da tabela de prescription_items, precisaríamos do workout_sessions_id
+  // Mas como a key do objeto é `id`, o onConflict vai atualizar
+  const { error } = await supabase
+    .from('prescription_items')
+    .upsert(
+      items.map(item => ({
+        id: item.id,
+        order_index: item.order_index,
+        session_id: item.session_id,
+      })),
+      { onConflict: 'id' }
+    )
+
+  if (error) {
+    console.error('Error updating prescription order:', error)
+    return { error: 'Failed to update order.' }
+  }
+
+  return { success: true }
+}
+

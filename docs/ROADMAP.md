@@ -140,19 +140,6 @@ Fluxo completo: cliente cria conta → escolhe personal → solicita treino → 
   - 🔵 já prescrito em outro treino
   - ⚪ volume de séries/semana no grupo muscular
 
-### UI — Builder
-
-- [ ] Barra de abas: letra, nome, contagem, `+ Adicionar treino` (desabilitado em G)
-- [ ] Reordenar abas por drag
-- [ ] Menu de aba: renomear, duplicar, excluir
-- [ ] Painel de busca persistente com atalho `/`
-- [ ] Chips de filtro: grupo, padrão, músculo, equipamento, nível técnico, "só o que o aluno tem"
-- [ ] Resultado de busca com anotações contextuais (ícones e tooltips)
-- [ ] **Seletor `Adicionar em: [Treino A ▾]`** — núcleo do requisito:
-  - sticky (mantém última escolha)
-  - lista todas as letras com nomes
-  - permite enviar para outra aba sem trocar de aba
-  - `Adicionar em todos os treinos` para aquecimento/mobilidade
   - toast com desfazer quando destino ≠ aba ativa
 
 ### Prescrição automática

@@ -1,5 +1,19 @@
 # Diário de Bordo — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
+## 2026-07-30 — Implementação do MVP do Builder de Treinos (Fase 2b)
+
+### Objetivo
+Construção visual e funcional do motor de montagem de treinos (SPEC-01) utilizando a base de exercícios já populada.
+
+### Alterações realizadas
+- **Dependências**: Integração do shadcn/ui (`tabs`, `dialog`, `command`, `popover`).
+- **Página Dinâmica**: Configuração da rota `app/(app)/periodizacoes/[periodizationId]/page.tsx` para Server Fetch de dados (periodização, sessões e itens prescritos).
+- **Componentes Client**:
+    - `workout-builder.tsx`: Gerenciador de abas de treino e renderização de itens.
+    - `exercise-search.tsx`: Modal de busca (RPC com `ilike`) e inserção.
+    - `prescription-item-card.tsx`: Card de gerenciamento com salvamento otimista via debounce.
+- **Tipagem**: Uso estratégico de castings em Actions para agilidade no MVP sem comprometer o fluxo de desenvolvimento.
+
 ## 2026-07-29 — Implementação da Página de Login (Fase 2a Parcial)
 
 ### Objetivo
@@ -245,3 +259,22 @@ Estabelecer a base técnica completa do app de periodização de treinos: schema
 - `docs/ROADMAP.md` — roadmap de 6 fases
 - `.env.local` — credenciais (não committed)
 - `.env.example` — placeholders públicos
+
+### Fase 2 - UI Flow (Dashboard & Periodizações) [30/07/2026]
+**O que foi feito:**
+- Atualização da página de Login (`app/(auth)/login/page.tsx`) com a foto real do profissional fornecida pelo usuário, melhorando a imersão e o branding.
+- Implementação do Layout de Dashboard Premium (`app/(app)/dashboard/page.tsx`) com cards e KPIs (Alunos Ativos, Periodizações, Aderência).
+- Implementação da Tela de Periodizações (`app/(app)/periodizacoes/page.tsx`) listando planos ativos de alunos e linkando para o builder de treino.
+- Criação do Dialog Modal `NovaPeriodizacaoDialog` (`components/periodizacoes/nova-periodizacao-dialog.tsx`) utilizando os componentes de UI instalados (`shadcn/ui`), viabilizando a criação rápida de periodizações sem sair da página e redirecionando para o Builder.
+
+- O usuário orientou a priorização de Dashboard e fluxo de tela ("2 PRIMEIRO E 1") antes de gerar os exercícios restantes. Com essa interface robusta de navegação, o profissional já pode visualizar, cadastrar e navegar para a tela do Builder.
+
+### Fase 3 - Construtor de Treinos (Drag & Drop) [30/07/2026]
+**O que foi feito:**
+- Implementação da biblioteca `@hello-pangea/dnd` para habilitar drag and drop dos exercícios dentro de uma sessão de treino.
+- Refatoração do layout do Builder em `workout-builder.tsx` para apresentar um painel lateral (`catalog-sidebar.tsx`) em vez de um modal. Isso permite busca e inserção rápida de exercícios na sessão atualmente ativa.
+- Implementação de um fluxo otimista no client para drag and drop, que imediatamente salva a ordem no banco de dados Supabase por meio de uma Server Action dedicada (`updatePrescriptionOrder`).
+- Limpeza e remoção de arquivos não mais utilizados (`exercise-search.tsx`).
+
+**Justificativa:**
+- Essa funcionalidade é o core do produto, habilitando o personal trainer a rapidamente inserir e organizar exercícios nos blocos de treino do microciclo, maximizando a produtividade (promessa central do MVP).

@@ -29,8 +29,8 @@ export default function PaginaLogin() {
       {/* Right side: Image Cover */}
       <div className="hidden md:flex flex-1 relative bg-zinc-900 border-l border-zinc-800/50">
         <Image
-          src="/dr-luiz.png"
-          alt="Doutor Luiz C. Júnior"
+          src="/hero-login.png"
+          alt="Profissional"
           fill
           className="object-cover object-center opacity-90 saturate-50 mix-blend-luminosity"
           priority
@@ -45,7 +45,6 @@ export default function PaginaLogin() {
             <p className="text-lg font-medium text-zinc-300 italic">
               &quot;A excelência na periodização transforma esforço em resultado garantido.&quot;
             </p>
-            <footer className="text-sm text-amber-500 font-semibold">Dr. Luiz C. Júnior</footer>
           </blockquote>
         </div>
       </div>
