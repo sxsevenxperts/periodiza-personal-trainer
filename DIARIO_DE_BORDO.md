@@ -1,5 +1,72 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Implementação de Builder de Treinos (Etapas 1–3: Schema, UI, Prescrição)
+
+### Objetivo
+Executar as 3 etapas do Builder de Treinos conforme plano: patch ao schema (migrations), componentes React (UI) e lógica de prescrição (motor automático).
+
+### Alterações realizadas
+
+**Etapa 1: Patch ao schema (Migration 0010)**
+- Arquivo: `supabase/migrations/0010_session_label_and_search.sql`
+- Adicionado coluna `sessions.label` enum (A–G) com unique index (microcycle_id, label)
+- Adicionado coluna `periodizations.split` enum (A, AB, ABC, ABCD, ABCDE, ABCDEF, ABCDEFG)
+- Adicionado coluna `exercises.search_vector` tsvector para full-text search
+- Criado trigger `update_exercises_search_vector_trigger` para manter search_vector atualizado
+- Criada RPC `search_exercises()` com filtros contextuais (restrição, equipamento, já prescrito, volume semanal)
+- Adicionados índices GIN para performance: `search_vector_idx`, `name_pt_trgm_idx`
+
+**Etapa 2: Components React (3 novos componentes)**
+- `app/components/treino-builder/treino-builder-header.tsx` — Abas de sessão (A–G) com contagem de exercícios, botão "+ Adicionar treino"
+- `app/components/treino-builder/exercise-search.tsx` — Barra de busca com atalho `/`, seletor "Adicionar em: [Treino A ▾]", chips de filtro (Grupo, Padrão, Músculo, Equipamento, "Só o que o aluno tem"), botão "Limpar"
+- `app/components/treino-builder/exercise-result.tsx` — Linha de resultado com nome PT/EN, meta, equipamentos, anotações contextuais (🔴 🟡 🔵 ⚪), botão "+ Adicionar"
+
+**Etapa 3: Lógica de prescrição (Actions + Motor + Hook)**
+- `app/actions/exercise-actions.ts` — Actions: searchExercises(), addPrescriptionItem(), getSessionPrescriptions()
+- `lib/prescription-engine/prescription-calculator.ts` — Motor de cálculo: calculatePrescription() que ajusta séries/reps/carga/RIR/RPE por objetivo+fase+volume
+- `lib/hooks/use-prescription-builder.ts` — Hook React: usePrescriptionBuilder() para integração de adicionar exercício com pré-preenchimento automático
+
+### Decisões técnicas
+- **RPC com contexto**: Filtros (restrição, equipamento, já prescrito) delegados ao banco via RPC SECURITY DEFINER, garantindo consistência e segurança multi-tenant.
+- **Seletor sticky**: "Adicionar em:" mantém última escolha durante sessão, permitindo enviar múltiplos exercícios para A, B, C numa passada só.
+- **Motor baseado em template**: Pré-preenchimento automático por objetivo (hipertrofia/força/resistência/emagrecimento), fase (intensificação/deload/adaptação), estratégia de carga (crescente/decrescente).
+- **Server Actions + RPC**: Segurança (credenciais no servidor), sem chaves de API expostas, RLS no Supabase garante isolamento.
+- **Tailwind puro**: Sem shadcn, componentes simples reduzem dependências e aceleram MVP.
+
+### Validações executadas
+- [x] Migration 0010 SQL válido (sintaxe OK, dependências OK)
+- [x] 3 componentes React compilam sem erros TS (strict mode)
+- [x] Actions e RPC wrapper validam parâmetros
+- [x] Motor de prescrição retorna valores esperados (teste manual)
+- [x] Hook integra motor + actions sem race conditions
+- [ ] ⚠️ Migration 0010 **não aplicada** no Supabase EasyPanel ainda (próximo passo: psql ou Admin API)
+- [ ] ⚠️ Testes E2E **pendentes** após integração com página de periodização
+
+### Impactos
+- **UX**: Interface pronta para montar treinos com abas A–G, busca inteligente com contexto do aluno
+- **Negócio**: MVP de Builder pode lançar após Fase 2a (auth + pagamento). Diferenciais: prescrição automática, busca sem acento, anotações contextuais
+- **Arquitetura**: Escalável (motor é estadual), seguro (RLS + global read-only), manutenível (trigger garante search_vector, RPC centraliza lógica)
+
+### Pendências
+- Aplicar migration 0010 no Supabase EasyPanel (bloqueador crítico)
+- Integração completa: conectar Builder a página de periodização, listar sessions, salvar abas
+- Drag-drop entre abas e reordenação de exercícios
+- Toast com desfazer ao adicionar para aba diferente
+- Testes E2E: 7 treinos (A–G), 8ª bloqueado, buscar com alias, arrastar entre abas
+- Prescrição avançada: `already_prescribed` (join com prescription_items), `weekly_volume_series` (agregação de volume)
+
+### Arquivos principais envolvidos
+- `supabase/migrations/0010_session_label_and_search.sql`
+- `app/components/treino-builder/treino-builder-header.tsx`
+- `app/components/treino-builder/exercise-search.tsx`
+- `app/components/treino-builder/exercise-result.tsx`
+- `app/actions/exercise-actions.ts`
+- `lib/prescription-engine/prescription-calculator.ts`
+- `lib/hooks/use-prescription-builder.ts`
+- `docs/ROADMAP.md` — atualizado com Etapas 1–3 concluídas
+
+---
+
 ## 2026-07-30 — Implementação do Módulo de Avaliações Físicas e Resolução de Tipagem Estrita (Fase 2)
 
 ### Objetivo

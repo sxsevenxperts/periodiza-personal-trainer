@@ -7,17 +7,23 @@
 - [x] Aba de avaliações do Aluno integrada no front-end (`/alunos/[clientId]/page.tsx`).
 - [x] Correção integral dos conflitos de tipagem estrita gerados pelo `@supabase/ssr` via tipagem exata e `index signature` de fallback.
 - [x] Correção de componentes UI do shadcn incompatíveis com `asChild`.
+- [x] **ETAPA 1 — Patch ao schema**: Migration 0010 com session.label (A-G), periodizations.split, full-text search (tsvector + unaccent + trigram), RPC search_exercises() com filtros contextuais.
+- [x] **ETAPA 2 — Components React**: TreinoBuildHeader (abas), ExerciseSearch (barra + filtros), ExerciseResult (anotações contextuais). Seletor "Adicionar em:" com sticky behavior.
+- [x] **ETAPA 3 — Lógica de prescrição**: Actions (search, add, get), Motor de cálculo automático (séries/reps/carga/RIR/RPE por objetivo+fase+volume), Hook usePrescriptionBuilder.
 
 ### Em andamento
-- [ ] Implementação visual do Builder de Treinos (Fase 2b/Fase 1).
-- [ ] Validação da inserção de blocos de prescrição.
+- [ ] Integração completa do Builder (listar sessões, salvar abas, ordem de exercícios).
+- [ ] Drag-drop entre abas e reordenação dentro de sessão.
+- [ ] Toast com desfazer ao adicionar exercício para aba diferente.
 
 ### Próximos passos
-- [ ] Concluir o motor de montagem de treinos (Arrastar, buscar, gerenciar abas de microciclos).
+- [ ] Página de periodização que renderiza o Builder (conexão com microcycle/session/prescription).
+- [ ] Teste E2E: criar 7 treinos (A-G), 8ª bloqueado, buscar "hip thrust", arrastar entre abas.
 - [ ] Adicionar suporte a templates de periodização.
 
 ### Riscos e débitos técnicos
 - **Risco mitigado**: O colapso na tipagem estrita do Supabase ameaçava atrasar as views; agora a arquitetura suporta o inferimento correto.
+- **Debt técnico**: Motor de prescrição é básico (não tem nuances de progressão semanal nem ajustes de RPE observado); OK para MVP.
 
 ---
 
