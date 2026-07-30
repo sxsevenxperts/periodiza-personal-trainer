@@ -1,5 +1,84 @@
 # Roadmap — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
+## Atualização — 2026-07-30 (revisão da revisão: bugs provados contra Postgres real)
+
+Revisão pedida sobre o trabalho anterior. Encontrou defeitos que as entradas
+anteriores não pegaram — inclusive um que o próprio roadmap declarava concluído.
+
+### Concluído
+- [x] **CRÍTICO — `updatePrescriptionOrder` nunca funcionou.** A action usava
+  `upsert` enviando só `{id, order_index, session_id}`. No Postgres,
+  `insert ... on conflict do update` monta a tupla candidata **antes** de avaliar
+  o conflito, então a ausência de `exercise_id` (`not null` sem default,
+  migration 0006) derruba a instrução mesmo quando a linha já existe. Reproduzido
+  contra PostgreSQL 16: `null value in column "exercise_id" ... violates
+  not-null constraint`. **Consequência: a reordenação por drag-and-drop nunca
+  persistiu** — a UI reordenava, a action retornava erro e a ordem voltava ao
+  recarregar. Este roadmap listava "drag-drop e reordenação com persistência"
+  como já existente. Reescrito com `UPDATE` por item, validado no mesmo Postgres.
+- [x] **Colisão de `order_index`.** `order_index` é nullable e o Postgres ordena
+  `NULLS FIRST` em `DESC`; uma única linha com índice nulo virava a primeira do
+  resultado, o valor lido era `null` e o próximo índice voltava para 1,
+  colidindo com o item que já ocupava a posição 1. Corrigido com filtro
+  `not null` + `nullsFirst: false`. Provado com as três linhas `1, 2, NULL`.
+- [x] `addPrescriptionItem` deixou de duplicar a lógica de próximo índice (e de
+  usar `.single()` numa consulta que legitimamente não retorna linhas); passou a
+  reusar `proximoOrderIndex`, que usa `maybeSingle()`.
+- [x] **Dependência de rede no build removida.** `app/layout.tsx` usava `Inter`
+  via `next/font/google`, que **baixa a fonte durante o `next build`** — ou seja,
+  `fonts.googleapis.com` era dependência obrigatória do deploy. Trocado por
+  `next/font/local` com o subset `latin` da Inter variável (48 KB) versionado em
+  `app/fonts/`. Confirmado que o `unicode-range` (U+0000-00FF) cobre todos os
+  acentos do português e que o build não referencia mais Google Fonts.
+- [x] **Dashboard deixou de exibir dados inventados.** A página codificava
+  "12 alunos ativos", "84% de aderência", "42 treinos" e três alunos fictícios
+  (João Silva, Maria Oliveira, Carlos Pereira) direto no JSX — números que
+  apareceriam idênticos para qualquer treinador, inclusive um sem nenhum aluno.
+  Agora as contagens de alunos e periodizações vêm do banco; o que ainda não
+  existe mostra `—` com a razão, em vez de número falso.
+- [x] Mensagens de erro do builder traduzidas para pt-BR. Eram exibidas ao
+  usuário em inglês (`Failed to add item.`) num produto declarado `lang="pt-BR"`.
+- [x] `error.tsx` e `not-found.tsx` deixaram de apontar para `/dashboard` (rota
+  protegida): se a causa do erro fosse a própria sessão, o botão "voltar"
+  devolveria o usuário ao login. Agora apontam para `/`, que decide conforme a
+  sessão.
+- [x] Sonda `/api/health` endurecida contra URL malformada (ver ressalva abaixo).
+
+### Em andamento
+- [ ] Confirmar o primeiro build verde no EasyPanel.
+- [ ] **CRÍTICO** — nenhum serviço publicado no domínio do Supabase.
+- [ ] **CRÍTICO** — aplicar a migration 0010.
+
+### Próximos passos
+- [ ] Auditar as demais actions com o mesmo rigor: o bug do `upsert` passou por
+  revisões anteriores porque ninguém executou o caminho contra um banco real.
+  `updatePrescriptionItem`, `movePrescriptionItem` e `copyPrescriptionItem` não
+  foram exercitados contra Postgres nesta revisão.
+- [ ] Suíte de testes automatizados — este bug teria sido pego por um único
+  teste de integração da reordenação. `vitest` está configurado e sem nenhum
+  arquivo de teste.
+- [ ] Remover os `eslint-disable` de arquivo inteiro em
+  `app/(app)/periodizacoes/[periodizationId]/actions.ts` (`no-explicit-any` e
+  `no-unused-vars`), que mascaram exatamente a classe de erro encontrada aqui.
+- [ ] Métricas reais de aderência e treinos realizados (dependem de
+  `workout_executions`).
+
+### Riscos e débitos técnicos
+- **Lição registrada**: o `upsert` quebrado sobreviveu a várias revisões porque
+  foi avaliado por leitura, não por execução. Toda action que escreve no banco
+  deve ser exercitada contra Postgres antes de ser declarada pronta.
+- **Ressalva de honestidade**: a proteção que adicionei em `/api/health` contra
+  `new URL()` lançando é **defesa em profundidade, não conserto de bug vivo**.
+  Ao testar, descobri que `lib/env.ts` já valida a URL com zod durante o
+  prerender de `/`, então uma URL malformada **derruba o build** antes de chegar
+  ao runtime. A proteção só passa a valer se `/` deixar de ser prerenderizada.
+- **Débito**: `app/(app)/periodizacoes/[periodizationId]/actions.ts` continua com
+  `as any` em todas as chamadas e dois `eslint-disable` de arquivo inteiro. A
+  ausência de tipos é o que permitiu o upsert inválido compilar.
+- **Débito**: a busca de contingência (`ilike`) devolve linhas com 4 colunas
+  onde a UI espera 12. Não quebra (a UI usa optional chaining), mas o tipo
+  declarado não corresponde ao retorno.
+
 ## Atualização — 2026-07-30 (revisão corretiva + destrave do deploy)
 
 Esta entrada **corrige** uma atualização anterior da mesma data, que registrava

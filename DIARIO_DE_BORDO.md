@@ -1,5 +1,165 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Revisão da revisão: bugs provados contra Postgres real
+
+### Objetivo
+Pedido: "revise e corrija tudo até aqui". Revisão do trabalho anterior, incluindo
+o que eu mesmo tinha acabado de entregar.
+
+O método mudou em relação às entradas anteriores: em vez de avaliar o código por
+leitura, subi um PostgreSQL 16 e **executei** os caminhos que escrevem no banco.
+Foi o que revelou o defeito mais grave — e ele tinha sobrevivido a várias
+revisões justamente porque ninguém o havia executado.
+
+### Alterações realizadas
+
+#### 1. `updatePrescriptionOrder` nunca funcionou (crítico)
+
+A action persistia a ordem do drag-and-drop com `upsert`, enviando só
+`{id, order_index, session_id}`. O comentário no código dizia que "como a key do
+objeto é `id`, o onConflict vai atualizar".
+
+Não vai. No Postgres, `insert ... on conflict do update` monta a tupla candidata
+**antes** de avaliar o conflito. Como `exercise_id` é `not null` sem default
+(migration 0006), a instrução morre na validação da tupla mesmo quando a linha
+já existe e o `on conflict (id)` casaria.
+
+Reproduzido:
+
+```
+ERROR:  null value in column "exercise_id" of relation "prescription_items"
+        violates not-null constraint
+DETAIL: Failing row contains (3333...3333, 1111...1111, null, 2, null).
+```
+
+Consequência: **a reordenação nunca persistiu.** A UI reordenava, a action
+retornava erro e a ordem voltava ao recarregar. O roadmap listava "drag-drop e
+reordenação dentro da sessão, com persistência" como funcionalidade já
+existente.
+
+Reescrito com `UPDATE` por item, validado no mesmo banco (`UPDATE 1`, valor
+persistido).
+
+#### 2. Colisão de `order_index`
+
+`prescription_items.order_index` é nullable, e o Postgres ordena `NULLS FIRST`
+em `DESC`. Com os itens `1, 2, NULL` numa sessão,
+`.order('order_index', {ascending:false}).limit(1)` devolvia `NULL` — valor
+falsy — e o próximo índice virava 1, colidindo com o item que já ocupava a
+posição 1. Corrigido com filtro `not null` + `nullsFirst: false`; o mesmo dado
+passou a devolver 2, e o próximo índice 3.
+
+Registro de erro meu: eu havia diagnosticado antes que o bug era o caso
+`order_index = 0`. Ao testar, `0` dá o mesmo resultado pelos dois caminhos — o
+diagnóstico estava errado e o caso real era o `NULL`.
+
+#### 3. Dependência de rede no build
+
+`app/layout.tsx` carregava `Inter` via `next/font/google`, que **baixa a fonte
+durante o `next build`**. Isso fazia de `fonts.googleapis.com` uma dependência
+obrigatória do deploy — num projeto cujo problema recorrente é justamente o
+build travar. Na entrada anterior eu documentei esse risco em vez de corrigi-lo;
+documentar um quebra-build não é corrigi-lo.
+
+Trocado por `next/font/local`, com o subset `latin` da Inter variável (48 KB)
+versionado em `app/fonts/`. Verificado que o `unicode-range` (U+0000-00FF) cobre
+todos os acentos do português e que o build não emite mais nenhuma referência a
+Google Fonts.
+
+#### 4. Dashboard exibia dados inventados
+
+A página codificava direto no JSX: 12 alunos ativos, 15 periodizações, 84% de
+aderência, 42 treinos e três alunos fictícios com prazos vencendo. Em produção
+qualquer treinador veria os mesmos números, inclusive um recém-cadastrado sem
+nenhum aluno.
+
+Agora as contagens vêm do banco. O que ainda não existe (aderência, treinos
+realizados) mostra `—` com a razão, em vez de número falso — `null` e `0` são
+estados distintos na UI.
+
+#### 5. Correções menores
+
+- Mensagens de erro do builder traduzidas: eram exibidas ao usuário em inglês
+  (`Failed to add item.`) num produto `lang="pt-BR"`.
+- `error.tsx` e `not-found.tsx` apontavam "voltar ao início" para `/dashboard`,
+  rota protegida — se a causa do erro fosse a sessão, o botão levaria ao login.
+  Passaram a apontar para `/`.
+- `addPrescriptionItem` duplicava a lógica de próximo índice e usava `.single()`
+  numa consulta que legitimamente não retorna linhas; passou a reusar
+  `proximoOrderIndex`.
+
+### Decisões técnicas
+
+**`UPDATE` por item em vez de RPC em lote.** São N updates, mas uma sessão tem
+poucos exercícios e eles saem em paralelo com `Promise.all`. Uma função em lote
+resolveria em uma ida ao banco, ao custo de mais uma migration pendente — e há
+uma migration travada há dias. Trocar só se virar gargalo medido.
+
+**Fonte versionada no repositório em vez de `next/font/google`.** Alternativa
+considerada: manter o Google e aceitar o risco, já que o `npm ci` do mesmo build
+prova que há internet. Rejeitada porque o custo de eliminar o risco é 48 KB e o
+custo de aceitá-lo é um build quebrado num projeto que já vinha travando no
+build.
+
+**`null` em vez de `0` nos indicadores.** Exigiu um tipo e um ramo a mais na UI,
+mas `0` onde o dado não existe é informação falsa.
+
+### Validações executadas
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| upsert quebrado | PostgreSQL 16, schema da 0006 | reproduzido: violação de not-null |
+| correção com `UPDATE` | mesmo banco | `UPDATE 1`, ordem persistida |
+| colisão de `order_index` | itens `1, 2, NULL` | reproduzida e corrigida (2 → próximo 3) |
+| `npx tsc --noEmit` | local | 0 erros |
+| `npm run lint` | local | 0 erros, 0 avisos |
+| `npm run build` | local | sucesso, `/dashboard` agora dinâmica (`ƒ`) |
+| build sem Google Fonts | grep em `.next/static` e `.next/server` | nenhuma referência |
+| fonte servida localmente | `curl` no standalone | `HTTP 200 font/woff2` |
+| `/api/health` | standalone, Supabase fora | `200`, sem vazar chave |
+| `/api/health?deep=1` | standalone, Supabase fora | `503` com a causa |
+| `/` e `/login` | standalone, Supabase fora | `200` nos dois |
+| 404 | `curl /nao-existe` | `404` |
+| `/dashboard` sem sessão | `curl` | `307` → `/login?redirecionar=%2Fdashboard` |
+
+### Impactos
+
+- **Usuário**: a reordenação de exercícios passa a funcionar de fato. O
+  dashboard deixa de mentir. Erros aparecem em português.
+- **Negócio**: o produto deixa de exibir métricas fabricadas a um cliente
+  pagante — o risco de credibilidade era maior que o bug técnico.
+- **Infraestrutura**: o build deixa de depender de `fonts.googleapis.com`, que
+  era um ponto de falha externo no deploy.
+
+### Pendências
+
+- O bloqueio do Supabase **não mudou**: nenhum serviço publicado no domínio, e a
+  migration 0010 continua pendente. Nada nesta entrada destrava isso.
+- `updatePrescriptionItem`, `movePrescriptionItem` e `copyPrescriptionItem` não
+  foram exercitados contra Postgres. Só `updatePrescriptionOrder` e
+  `proximoOrderIndex` foram.
+- **Ressalva de honestidade**: a proteção que adicionei em `/api/health` contra
+  `new URL()` lançando é defesa em profundidade, não conserto de bug vivo. Ao
+  testar descobri que `lib/env.ts` já valida a URL com zod durante o prerender
+  de `/`, então URL malformada derruba o build antes de chegar ao runtime.
+  Mantida porque deixa de valer se `/` deixar de ser prerenderizada, mas não
+  conta como bug corrigido.
+- `docker build` segue não executado — não há daemon Docker no ambiente.
+- Os `eslint-disable` de arquivo inteiro no arquivo de actions continuam lá. São
+  o que permitiu o upsert inválido compilar.
+
+### Arquivos principais envolvidos
+- `app/(app)/periodizacoes/[periodizationId]/actions.ts`
+- `app/(app)/dashboard/page.tsx`
+- `app/(app)/dashboard/actions.ts`
+- `app/layout.tsx`
+- `app/fonts/inter-latin-var.woff2`
+- `app/api/health/route.ts`
+- `app/error.tsx`
+- `app/not-found.tsx`
+
+---
+
 ## 2026-07-30 — Blindagem de runtime para o EasyPanel
 
 ### Objetivo

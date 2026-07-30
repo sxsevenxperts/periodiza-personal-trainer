@@ -10,16 +10,7 @@ import { z } from 'zod'
 export async function addPrescriptionItem(sessionId: string, exerciseId: string) {
   const supabase = (await criarClienteServidor()) as any
 
-  // Find max order_index to append to the end
-  const { data: existing } = await supabase
-    .from('prescription_items')
-    .select('order_index')
-    .eq('session_id', sessionId)
-    .order('order_index', { ascending: false })
-    .limit(1)
-    .single()
-
-  const nextOrder = existing?.order_index ? existing.order_index + 1 : 1
+  const nextOrder = await proximoOrderIndex(supabase, sessionId)
 
   const { data, error } = await supabase
     .from('prescription_items')
@@ -36,8 +27,8 @@ export async function addPrescriptionItem(sessionId: string, exerciseId: string)
     .single()
 
   if (error) {
-    console.error('Error adding prescription item:', error)
-    return { error: 'Failed to add item.' }
+    console.error('Erro ao adicionar exercicio a sessao:', error)
+    return { error: 'Não foi possível adicionar o exercício.' }
   }
 
   revalidatePath('/periodizacoes/[periodizationId]', 'page')
@@ -65,8 +56,8 @@ export async function updatePrescriptionItem(
     .eq('id', itemId)
 
   if (error) {
-    console.error('Error updating prescription item:', error)
-    return { error: 'Failed to update item.' }
+    console.error('Erro ao atualizar item de prescricao:', error)
+    return { error: 'Não foi possível salvar a alteração.' }
   }
 
   revalidatePath('/periodizacoes/[periodizationId]', 'page')
@@ -82,8 +73,8 @@ export async function removePrescriptionItem(itemId: string) {
     .eq('id', itemId)
 
   if (error) {
-    console.error('Error removing prescription item:', error)
-    return { error: 'Failed to remove item.' }
+    console.error('Erro ao remover item de prescricao:', error)
+    return { error: 'Não foi possível remover o exercício.' }
   }
 
   revalidatePath('/periodizacoes/[periodizationId]', 'page')
@@ -98,7 +89,7 @@ export async function getMuscles() {
     .order('name_pt')
 
   if (error) {
-    console.error('Error fetching muscles:', error)
+    console.error('Erro ao carregar a lista de musculos:', error)
     return { data: [] }
   }
 
@@ -153,7 +144,7 @@ export async function searchExercises(
     error.code === 'PGRST202' || /search_exercises/i.test(error.message ?? '')
 
   if (!funcaoAusente) {
-    console.error('Error searching exercises (RPC):', error)
+    console.error('Erro na busca de exercicios (RPC):', error)
     return { data: [], buscaSimplificada: false }
   }
 
@@ -200,7 +191,7 @@ async function buscarExerciciosSimplificado(query: string, muscleId?: string | n
   const { data, error } = await q.limit(30)
 
   if (error) {
-    console.error('Error searching exercises (fallback):', error)
+    console.error('Erro na busca simplificada de exercicios:', error)
     return { data: [] }
   }
 
@@ -208,19 +199,27 @@ async function buscarExerciciosSimplificado(query: string, muscleId?: string | n
 }
 
 /**
- * Retorna o próximo order_index livre de uma sessão.
- * Mantém a mesma convenção de addPrescriptionItem (começa em 1).
+ * Retorna o proximo order_index livre de uma sessao. A numeracao comeca em 1.
+ *
+ * `nullsFirst: false` e obrigatorio: `prescription_items.order_index` e
+ * nullable (migration 0006) e o Postgres ordena NULLS FIRST em DESC. Sem isso,
+ * uma unica linha com order_index nulo passa a ser a primeira do resultado, o
+ * valor lido vira null e o proximo indice volta para 1 — colidindo com o item
+ * que ja ocupa a posicao 1. Verificado contra PostgreSQL 16.
+ *
+ * `maybeSingle` (e nao `single`) porque sessao vazia e um caso normal, nao erro.
  */
 async function proximoOrderIndex(supabase: any, sessionId: string): Promise<number> {
   const { data } = await supabase
     .from('prescription_items')
     .select('order_index')
     .eq('session_id', sessionId)
-    .order('order_index', { ascending: false })
+    .not('order_index', 'is', null)
+    .order('order_index', { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle()
 
-  return data?.order_index ? data.order_index + 1 : 1
+  return (data?.order_index ?? 0) + 1
 }
 
 /**
@@ -238,8 +237,8 @@ export async function movePrescriptionItem(itemId: string, targetSessionId: stri
     .eq('id', itemId)
 
   if (error) {
-    console.error('Error moving prescription item:', error)
-    return { error: 'Failed to move item.' }
+    console.error('Erro ao mover exercicio de sessao:', error)
+    return { error: 'Não foi possível mover o exercício.' }
   }
 
   revalidatePath('/periodizacoes/[periodizationId]', 'page')
@@ -260,8 +259,8 @@ export async function copyPrescriptionItem(itemId: string, targetSessionId: stri
     .single()
 
   if (fetchError || !origem) {
-    console.error('Error loading prescription item to copy:', fetchError)
-    return { error: 'Failed to load item.' }
+    console.error('Erro ao carregar item de prescricao para copiar:', fetchError)
+    return { error: 'Não foi possível carregar o exercício.' }
   }
 
   const nextOrder = await proximoOrderIndex(supabase, targetSessionId)
@@ -296,35 +295,56 @@ export async function copyPrescriptionItem(itemId: string, targetSessionId: stri
     .single()
 
   if (error) {
-    console.error('Error copying prescription item:', error)
-    return { error: 'Failed to copy item.' }
+    console.error('Erro ao copiar exercicio para outra sessao:', error)
+    return { error: 'Não foi possível copiar o exercício.' }
   }
 
   revalidatePath('/periodizacoes/[periodizationId]', 'page')
   return { data }
 }
 
-export async function updatePrescriptionOrder(items: { id: string; order_index: number; session_id: string }[]) {
+/**
+ * Persiste a nova ordem dos itens apos o drag-and-drop.
+ *
+ * Implementado com UPDATE por item, e nao com `upsert`. O upsert anterior
+ * enviava so `{id, order_index, session_id}` e **nunca funcionou**: no Postgres,
+ * `insert ... on conflict do update` monta a tupla candidata ANTES de avaliar o
+ * conflito, entao a ausencia de `exercise_id` (not null, sem default na
+ * migration 0006) derruba a instrucao com violacao de not-null mesmo quando a
+ * linha ja existe e o `on conflict (id)` casaria. Reproduzido contra PostgreSQL
+ * 16: `null value in column "exercise_id" ... violates not-null constraint`.
+ *
+ * Como consequencia, a reordenacao nunca chegou a persistir — a UI reordenava,
+ * a action retornava erro e a ordem voltava ao recarregar.
+ *
+ * Sao N updates em vez de uma instrucao so. Uma sessao tem poucos exercicios
+ * (dezenas no pior caso), e os updates saem em paralelo. Trocar por um RPC em
+ * lote so vale se isso virar gargalo medido.
+ */
+export async function updatePrescriptionOrder(
+  items: { id: string; order_index: number; session_id: string }[],
+) {
+  if (items.length === 0) return { success: true }
+
   const supabase = (await criarClienteServidor()) as any
 
-  // Para garantir o RLS da tabela de prescription_items, precisaríamos do workout_sessions_id
-  // Mas como a key do objeto é `id`, o onConflict vai atualizar
-  const { error } = await supabase
-    .from('prescription_items')
-    .upsert(
-      items.map(item => ({
-        id: item.id,
-        order_index: item.order_index,
-        session_id: item.session_id,
-      })),
-      { onConflict: 'id' }
-    )
+  const resultados = await Promise.all(
+    items.map((item) =>
+      supabase
+        .from('prescription_items')
+        .update({ order_index: item.order_index, session_id: item.session_id })
+        .eq('id', item.id),
+    ),
+  )
 
-  if (error) {
-    console.error('Error updating prescription order:', error)
-    return { error: 'Failed to update order.' }
+  const falha = resultados.find((r) => r.error)
+
+  if (falha) {
+    console.error('Erro ao persistir a ordem dos exercicios:', falha.error)
+    return { error: 'Não foi possível salvar a nova ordem.' }
   }
 
+  revalidatePath('/periodizacoes/[periodizationId]', 'page')
   return { success: true }
 }
 

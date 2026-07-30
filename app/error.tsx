@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 
 import { classesBotao } from '@/components/ui/button'
 
@@ -46,9 +47,13 @@ export default function ErroDeRota({
         <button type="button" onClick={reset} className={classesBotao()}>
           Tentar de novo
         </button>
-        <a href="/dashboard" className={classesBotao({ variant: 'outline' })}>
+        {/* Aponta para `/`, nao para `/dashboard`: se a causa do erro for a
+            propria sessao, uma rota protegida devolveria o usuario ao login em
+            vez de a algum lugar util. A raiz decide o destino conforme a
+            sessao. */}
+        <Link href="/" className={classesBotao({ variant: 'outline' })}>
           Voltar ao início
-        </a>
+        </Link>
       </div>
     </main>
   )

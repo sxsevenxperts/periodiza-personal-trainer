@@ -180,14 +180,47 @@ O stack trace correspondente sai no log do container.
 
 ---
 
-## Riscos conhecidos do build
+## O build não depende de rede externa
 
-**`next/font/google`.** O `app/layout.tsx` usa `Inter` via `next/font/google`,
-que **baixa a fonte durante o build**. Se a rede do builder do EasyPanel não
-alcançar `fonts.googleapis.com`, o `next build` falha. O `npm ci` do mesmo build
-já prova que há saída para a internet, então o risco é baixo — mas se aparecer
-`Failed to fetch \`Inter\` from Google Fonts`, a correção é migrar para
-`next/font/local` com o `.woff2` versionado no repositório.
+Além do registry do npm, o build **não busca nada na internet**. Isso é
+deliberado: quanto menos hosts externos o build precisa alcançar, menos formas
+de o deploy falhar por motivo alheio ao código.
+
+A fonte é o caso que exigiu correção. `next/font/google` **baixa a fonte durante
+o `next build`**, o que tornava `fonts.googleapis.com` uma dependência
+obrigatória do deploy. O projeto passou a usar `next/font/local` com o subset
+`latin` da Inter variável (48 KB) versionado em `app/fonts/`.
+
+| | Antes | Agora |
+|---|---|---|
+| Origem da fonte | `fonts.googleapis.com`, em tempo de build | `app/fonts/inter-latin-var.woff2` |
+| Build sem acesso ao Google | falha | funciona |
+| Servida ao browser de | domínio do Google | domínio da própria aplicação |
+
+Cobertura verificada: o `unicode-range` do subset (`U+0000-00FF`) contém todos
+os acentos do português (á à â ã ç é ê í ó ô õ ú ü e as maiúsculas).
+
+Para conferir que nenhuma referência voltou:
+
+```bash
+grep -r "fonts.gstatic\|fonts.googleapis" .next/static .next/server   # deve não achar nada
+```
+
+---
+
+## A URL do Supabase é validada no build
+
+`lib/env.ts` valida `NEXT_PUBLIC_SUPABASE_URL` com zod durante o prerender de
+`/`. Uma URL malformada — tipicamente o host **sem o esquema**
+(`meu-supabase.easypanel.host` em vez de `https://meu-supabase...`) — derruba o
+build com mensagem explícita, em vez de virar erro obscuro em produção:
+
+```
+Error: Variaveis de ambiente invalidas ou ausentes:
+  - NEXT_PUBLIC_SUPABASE_URL: NEXT_PUBLIC_SUPABASE_URL precisa ser uma URL valida.
+```
+
+Se aparecer isso no log do EasyPanel, o build arg está sem `https://`.
 
 ---
 

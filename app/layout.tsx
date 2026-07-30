@@ -1,14 +1,30 @@
 import type { ReactNode } from 'react'
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import localFont from 'next/font/local'
 
 import { Providers } from '@/components/providers'
 import './globals.css'
 
-const inter = Inter({
-  subsets: ['latin'],
+/**
+ * Inter servida do proprio repositorio, e nao via `next/font/google`.
+ *
+ * `next/font/google` BAIXA a fonte durante o `next build`. Num build de
+ * container isso transforma `fonts.googleapis.com` em dependencia obrigatoria
+ * do deploy: se a rede do builder nao alcancar o Google, o build inteiro falha
+ * — e o build e exatamente onde este projeto vinha travando.
+ *
+ * O arquivo e o subset `latin` da Inter variavel (48 KB), cujo unicode-range
+ * (U+0000-00FF) cobre todos os acentos do portugues. Peso 100–900 numa fonte
+ * variavel unica, entao nao ha arquivo por peso.
+ */
+const inter = localFont({
+  src: './fonts/inter-latin-var.woff2',
+  weight: '100 900',
+  style: 'normal',
   display: 'swap',
   variable: '--font-inter',
+  // Metricas da Inter, para o texto nao "pular" quando a fonte carrega.
+  fallback: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
 })
 
 export const metadata: Metadata = {

@@ -20,7 +20,9 @@ export default function NaoEncontrado() {
       </div>
 
       <div>
-        <Link href="/dashboard" className={classesBotao()}>
+        {/* `/` e nao `/dashboard`: a raiz redireciona quem tem sessao para o
+            dashboard e mostra a landing para quem nao tem. */}
+        <Link href="/" className={classesBotao()}>
           Voltar ao início
         </Link>
       </div>

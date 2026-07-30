@@ -32,6 +32,28 @@ type Diagnostico = {
   detalhe: string
 }
 
+/**
+ * Extrai o host da URL sem nunca lancar.
+ *
+ * `new URL()` lanca em entrada malformada — e "malformada" inclui o caso mais
+ * provavel de erro do operador: informar o host sem o esquema
+ * (`meu-supabase.easypanel.host` em vez de `https://meu-supabase...`). Deixar a
+ * excecao subir derrubaria justamente a rota cuja razao de existir e responder
+ * quando a configuracao esta errada.
+ */
+function hostDaUrl(url: string): { host: string | null; erro?: string } {
+  try {
+    return { host: new URL(url).host }
+  } catch {
+    return {
+      host: null,
+      erro:
+        'URL invalida — nao foi possivel interpretar. Confira se o esquema ' +
+        '(https://) esta presente.',
+    }
+  }
+}
+
 /** Le o campo `role` do payload do JWT sem validar assinatura. */
 function papelDoJwt(chave: string): string | null {
   const payload = chave.split('.')[1]
@@ -98,8 +120,10 @@ export async function GET(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const chave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+  const { host, erro: erroDeUrl } = url ? hostDaUrl(url) : { host: null }
+
   const configuracao = {
-    NEXT_PUBLIC_SUPABASE_URL: url ? new URL(url).host : null,
+    NEXT_PUBLIC_SUPABASE_URL: host ?? (url ? { invalida: erroDeUrl } : null),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: chave
       ? { comprimento: chave.length, papel: papelDoJwt(chave) }
       : null,
@@ -109,6 +133,7 @@ export async function GET(request: Request) {
   const faltando = [
     !url && 'NEXT_PUBLIC_SUPABASE_URL',
     !chave && 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    url && !host && 'NEXT_PUBLIC_SUPABASE_URL (presente, porem invalida)',
   ].filter((nome): nome is string => typeof nome === 'string')
 
   const base = {
@@ -125,9 +150,17 @@ export async function GET(request: Request) {
     return NextResponse.json(base, { status: 200 })
   }
 
-  if (!url || !chave) {
+  if (!url || !chave || !host) {
     return NextResponse.json(
-      { ...base, supabase: { ok: false, detalhe: 'variaveis ausentes; sonda nao executada.' } },
+      {
+        ...base,
+        supabase: {
+          ok: false,
+          detalhe: host
+            ? 'variaveis ausentes; sonda nao executada.'
+            : 'configuracao invalida; sonda nao executada.',
+        },
+      },
       { status: 503 },
     )
   }
