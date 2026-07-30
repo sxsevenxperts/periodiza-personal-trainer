@@ -61,8 +61,6 @@ const TABELAS_DE_TAXONOMIA: ReadonlyArray<{
   { chave: 'padroes_movimento', tabela: 'movement_patterns' },
   { chave: 'musculos', tabela: 'muscles' },
   { chave: 'equipamentos', tabela: 'equipment' },
-  { chave: 'grupos_catalogo', tabela: 'catalog_groups' },
-  { chave: 'familias_substituicao', tabela: 'substitution_families' },
 ]
 
 /**
@@ -76,8 +74,8 @@ const MAPA_DE_COLUNAS: Readonly<Record<string, string>> = {
   nome_en: 'name_en',
   descricao: 'description',
   ordem: 'order_index',
-  regiao_corporal: 'body_region_slug',
-  padrao_movimento: 'movement_pattern_slug',
+  regiao_corporal: 'body_region_slug', // Will be mapped to body_region_id
+  padrao_movimento: 'movement_pattern_slug', // Will be mapped to movement_pattern_id
   dominancia: 'dominance',
   categoria: 'category',
   criterio: 'criteria',
@@ -119,6 +117,18 @@ function ehArquivoAusente(erro: unknown): boolean {
   )
 }
 
+
+const idCache: Record<string, Record<string, string>> = {};
+
+async function loadIds(supabase: Supabase, table: string) {
+  const { data, error } = await supabase.from(table).select('id, slug');
+  if (error) throw error;
+  idCache[table] = {};
+  for (const row of data || []) {
+    idCache[table][row.slug] = row.id;
+  }
+}
+
 function traduzir(item: Registro, origem: string): Registro {
   const linha: Registro = {}
 
@@ -127,6 +137,15 @@ function traduzir(item: Registro, origem: string): Registro {
     if (coluna === undefined) {
       console.warn(`  ! campo sem mapeamento em ${origem}: "${campo}" (ignorado)`)
       continue
+    }
+    
+    if (coluna === 'body_region_slug' && idCache['body_regions']) {
+      linha['body_region_id'] = idCache['body_regions'][valor as string];
+      continue;
+    }
+    if (coluna === 'movement_pattern_slug' && idCache['movement_patterns']) {
+      linha['movement_pattern_id'] = idCache['movement_patterns'][valor as string];
+      continue;
     }
     linha[coluna] = valor
   }
@@ -169,6 +188,7 @@ async function semearTaxonomia(supabase: Supabase): Promise<void> {
     const linhas = taxonomia[chave].map((item) => traduzir(item, chave))
     const total = await upsertEmLotes(supabase, tabela, linhas)
     console.log(`  ${tabela}: ${total} registros`)
+    await loadIds(supabase, tabela);
   }
 }
 
