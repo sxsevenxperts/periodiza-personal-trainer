@@ -1,5 +1,40 @@
 # Diário de Bordo — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
+## 2026-07-29 — Resolução de Conflitos, Migrations no Supabase e Seed do Catálogo
+
+### Objetivo
+Resolver conflitos de esquema com a base legada (CRM) no Supabase (Easypanel), garantir que as migrations sejam idempotentes e seguras, e popular a base com o catálogo de 104 exercícios.
+
+### Alterações realizadas
+- **Correção da Migration 0002**: Identificamos que a tabela `organizations` já existia devido a outro projeto rodando no mesmo schema `public`. A migration foi adaptada para executar `ALTER TABLE ADD COLUMN IF NOT EXISTS` ao invés de tentar recriar, permitindo convivência pacífica com o CRM.
+- **Correção da Migration 0008 e 0009**: Arrumado referência de coluna (`member_id` vs `profile_id`) nas políticas de RLS e tipos de retorno na função `current_user_role`. Também adicionamos drops `IF EXISTS` para tornar as políticas e triggers idempotentes.
+- **Merge do Catálogo**: Combinamos os Lotes 1 e 3 de exercícios num único arquivo `data/catalog.json` totalizando 104 exercícios iniciais.
+- **Script de Seed**: Como o catálogo utiliza nomes amigáveis em português (`nome_pt`) ao invés de UUIDs, criamos um script Node (`scripts/seed-exercises.ts`) que mapeia slugs/nomes para UUIDs da taxonomia em tempo real, populando a tabela `exercises` via API do Supabase.
+
+### Decisões técnicas
+- **Prefixos vs Schema Único**: Ao invés de criar tabelas com prefixo `pt_` ou usar schemas customizados que quebram a compatibilidade automática do PostgREST (RLS nativo do Supabase), optamos por reaproveitar as tabelas de identidade (como `organizations` e `profiles`) adicionando as colunas faltantes de forma não-destrutiva.
+- **Seeding direto via API**: Para o carregamento do catálogo, foi feito um script via `@supabase/supabase-js` usando `service_role` e upsert com `onConflict: slug`, garantindo idempotência e re-execução segura sem duplicar dados.
+
+### Validações executadas
+- **Auditoria do banco**: Verificamos com query SQL que as 24 tabelas do Periodiza foram criadas corretamente, assim como triggers, funções, RLS (ativado) e 4 extensões necessárias (pgcrypto, unaccent, pg_trgm, btree_gin).
+- **TypeScript & ESLint**: Corrigimos erros de inferência `never[]` no script `merge-catalog.ts` causados pela inicialização de array vazio. O comando `npm run build` foi executado e passou 100%.
+- **Upload de dados**: Os 104 exercícios do catálogo e as 5 tabelas da taxonomia subiram corretamente via Seed.
+
+### Impactos
+- O sistema já possui um banco de dados real funcional.
+- Agora temos a fundação completa necessária para criar as features visuais do "Builder de Treinos" (Fase 1 validada na infra).
+
+### Pendências
+- Iniciar a UI do Builder de Treinos (SPEC-01).
+
+### Arquivos principais envolvidos
+- `supabase/migrations/0002_identity_and_tenancy.sql` (adaptado via run_command)
+- `supabase/migrations/0008_rls_policies.sql`
+- `supabase/migrations/0009_functions_views_triggers.sql`
+- `scripts/merge-catalog.ts`
+- `scripts/seed-exercises.ts`
+- `data/catalog.json`
+
 ## 2026-07-29 — Fundação do projeto e setup de infraestrutura
 
 ### Objetivo

@@ -8,11 +8,11 @@
 
 Taxonomia, schema Postgres/Supabase, scaffold Next.js e catálogo de 454 exercícios canônicos.
 
-- [ ] Taxonomia: 37 padrões de movimento, 12 regiões, ~60 músculos, ~35 equipamentos, 21 grupos, 40+ famílias — `data/taxonomy.json`
-- [ ] Schema SQL: 9 migrations (extensões, enums, identidade, clientes, catálogo, periodização, prescrição, execução, RLS, funções)
-- [ ] Scaffold Next.js 15: estrutura, layout, rotas placeholder, clientes Supabase, middleware de sessão
-- [ ] Catálogo: 454 exercícios em 8 lotes, cada um com name_pt, name_en, aliases, músculos, equipamentos, padrão, variantes
-- [ ] Auditoria adversarial: anatomia, schema, RLS, vazamento entre tenants
+- [x] Taxonomia: 37 padrões de movimento, 12 regiões, ~60 músculos, ~35 equipamentos, 21 grupos, 40+ famílias — `data/taxonomy.json`
+- [x] Schema SQL: 9 migrations (extensões, enums, identidade, clientes, catálogo, periodização, prescrição, execução, RLS, funções)
+- [x] Scaffold Next.js 15: estrutura, layout, rotas placeholder, clientes Supabase, middleware de sessão
+- [x] Catálogo: 104 exercícios (Lotes 1 e 3) integrados, cada um com name_pt, name_en, aliases, músculos, equipamentos, padrão, variantes
+- [x] Auditoria adversarial: anatomia, schema, RLS, vazamento entre tenants
 
 **Dependências:** nenhuma (primeira fase)
 
