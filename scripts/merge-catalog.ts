@@ -5,7 +5,7 @@ async function merge() {
   const exercisesDir = path.join(process.cwd(), 'data', 'exercises');
   const files = await readdir(exercisesDir);
   
-  const catalog = { exercicios: [], variantes: [] };
+  const catalog: { exercicios: Record<string, unknown>[], variantes: Record<string, unknown>[] } = { exercicios: [], variantes: [] };
   
   for (const file of files) {
     if (!file.endsWith('.json')) continue;
