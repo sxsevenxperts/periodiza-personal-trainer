@@ -74,6 +74,7 @@ export function WorkoutBuilder({
       .sort((a, b) => a.order_index - b.order_index)
 
     const [movedItem] = sessionItems.splice(sourceIndex, 1)
+    if (!movedItem) return
     sessionItems.splice(destinationIndex, 0, movedItem)
 
     sessionItems.forEach((item, index) => {

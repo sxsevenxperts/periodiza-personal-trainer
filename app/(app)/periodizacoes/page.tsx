@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { CabecalhoPagina } from '@/components/layout/cabecalho-pagina'
-import { Button } from '@/components/ui/button'
+import { Button, classesBotao } from '@/components/ui/button'
 import { PlusCircle, Target, CalendarDays, ArrowRight } from 'lucide-react'
 import { NovaPeriodizacaoDialog } from '@/components/periodizacoes/nova-periodizacao-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -77,11 +77,12 @@ export default async function PaginaPeriodizacoes() {
                   </div>
                 </div>
                 
-                <Button asChild variant="secondary" className="w-full sm:w-auto gap-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700">
-                  <Link href={`/periodizacoes/${periodizacao.id}`}>
-                    Ver Builder <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
+                <Link
+                  href={`/periodizacoes/${periodizacao.id}`}
+                  className={classesBotao({ variant: "secondary", className: "w-full sm:w-auto gap-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700" })}
+                >
+                  Ver Builder <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             </CardContent>
           </Card>

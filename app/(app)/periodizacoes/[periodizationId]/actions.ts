@@ -103,7 +103,7 @@ export async function getMuscles() {
   }
 
   return { data }
-
+}
 
 export async function searchExercises(query: string, muscleId?: string | null) {
   const supabase = (await criarClienteServidor()) as any

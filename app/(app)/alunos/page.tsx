@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { CabecalhoPagina } from '@/components/layout/cabecalho-pagina'
-import { Button } from '@/components/ui/button'
-import { PlusCircle, Users, Activity } from 'lucide-react'
+import { Button, classesBotao } from '@/components/ui/button'
+import { PlusCircle, Users, Activity, User } from 'lucide-react'
 import { getAlunos } from './actions'
 import { NovoAlunoDialog } from '@/components/alunos/novo-aluno-dialog'
 
@@ -53,9 +53,13 @@ export default async function AlunosPage() {
                     <Activity className="w-4 h-4" />
                     <span>0 Planos</span>
                   </div>
-                  <Button asChild variant="ghost" size="sm" className="text-amber-500 hover:text-amber-400 hover:bg-amber-500/10">
-                    <Link href={`/alunos/${aluno.id}`}>Ver Perfil</Link>
-                  </Button>
+                  <Link 
+                    href={`/alunos/${aluno.id}`}
+                    className={classesBotao({ variant: "ghost", size: "sm", className: "text-amber-500 hover:text-amber-400 hover:bg-amber-500/10" })}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Perfil
+                  </Link>
                 </div>
               </div>
             ))}

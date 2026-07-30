@@ -2,10 +2,11 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { CabecalhoPagina } from '@/components/layout/cabecalho-pagina'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getAluno, getAnamnese } from './actions'
+import { getAluno, getAnamnese, getAssessments } from './actions'
 import { ClipboardList, Activity, Dumbbell, CalendarRange } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+import { AvaliacoesList } from '@/components/avaliacoes/avaliacoes-list'
 import { AnamneseForm } from '@/components/anamnese/anamnese-form'
 
 export const metadata: Metadata = {
@@ -19,9 +20,10 @@ interface PageProps {
 export default async function AlunoProfilePage({ params }: PageProps) {
   const { clientId } = await params
   
-  const [aluno, anamnese] = await Promise.all([
+  const [aluno, anamnese, avaliacoes] = await Promise.all([
     getAluno(clientId),
-    getAnamnese(clientId)
+    getAnamnese(clientId),
+    getAssessments(clientId)
   ])
 
   if (!aluno) {
@@ -75,10 +77,7 @@ export default async function AlunoProfilePage({ params }: PageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-zinc-500">
-                  <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Módulo de avaliações em breve.</p>
-                </div>
+                <AvaliacoesList clientId={clientId} assessments={avaliacoes} />
               </CardContent>
             </Card>
           </TabsContent>

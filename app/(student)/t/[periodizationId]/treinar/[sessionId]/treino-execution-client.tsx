@@ -31,7 +31,7 @@ export function TreinoExecutionClient({ session, periodizationId, sessionId }: T
   const toggleSet = (itemId: string, setIndex: number) => {
     setCompletedSets(prev => {
       const updated = { ...prev }
-      updated[itemId] = [...updated[itemId]]
+      updated[itemId] = [...(updated[itemId] || [])]
       updated[itemId][setIndex] = !updated[itemId][setIndex]
       return updated
     })

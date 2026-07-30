@@ -53,3 +53,39 @@ export async function saveAnamnese(clientId: string, notes: string) {
 
   return { success: true }
 }
+
+export async function getAssessments(clientId: string) {
+  const supabase = await criarClienteServidor()
+  
+  const { data, error } = await supabase
+    .from('client_assessments')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('assessment_date', { ascending: false })
+
+  if (error) {
+    console.error('Erro ao buscar avaliações:', error)
+    return []
+  }
+
+  return data
+}
+
+export async function createAssessment(clientId: string, date: string, notes: string) {
+  const supabase = await criarClienteServidor()
+  
+  const { error } = await supabase
+    .from('client_assessments')
+    .insert({
+      client_id: clientId,
+      assessment_date: date,
+      notes
+    })
+
+  if (error) {
+    console.error('Erro ao salvar avaliação:', error)
+    return { error: 'Falha ao salvar' }
+  }
+
+  return { success: true }
+}
