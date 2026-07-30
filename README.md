@@ -118,9 +118,14 @@ docker run -p 3000:3000 \
   periodiza
 ```
 
-`NEXT_PUBLIC_*` precisam ser **build args**, não só variáveis de runtime: o Next
-as inlina no bundle do browser durante o build. Passar `SUPABASE_URL` ou
-`SUPABASE_KEY` não funciona — `lib/env.ts` valida os nomes com zod.
+As duas variáveis públicas precisam ser **build args**, não só variáveis de
+runtime: o Next as resolve durante o build. O Dockerfile aceita qualquer um dos
+dois pares — `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`, que
+`lib/env.ts` valida com zod e têm precedência, ou `SUPABASE_URL` / `SUPABASE_KEY`
+como alias, que é o que o EasyPanel já publica.
+
+A chave precisa ser a **anon**: o build aborta se receber a service_role, que
+nunca pode ir para o bundle do browser.
 
 Configuração no EasyPanel e diagnóstico de falhas: `docs/DEPLOY_EASYPANEL.md`.
 

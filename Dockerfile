@@ -2,13 +2,17 @@
 # Usado pelo EasyPanel, que executa `docker buildx build -f <repo>/Dockerfile`.
 #
 # ATENCAO — variaveis NEXT_PUBLIC_*:
-# O Next inline as variaveis NEXT_PUBLIC_* no bundle do browser durante o BUILD.
-# Por isso elas entram como ARG (build-time), nao apenas como env de runtime.
-# No EasyPanel, cadastre os build args com EXATAMENTE estes nomes:
-#   NEXT_PUBLIC_SUPABASE_URL
-#   NEXT_PUBLIC_SUPABASE_ANON_KEY
-# Passar SUPABASE_URL / SUPABASE_KEY nao funciona: lib/env.ts valida os nomes
-# acima com zod e derruba o app na primeira renderizacao.
+# O Next resolve as variaveis NEXT_PUBLIC_* durante o BUILD. Por isso elas
+# entram como ARG (build-time), nao apenas como env de runtime.
+#
+# Nomes aceitos como build arg (qualquer um dos dois pares):
+#   NEXT_PUBLIC_SUPABASE_URL       ou  SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY  ou  SUPABASE_KEY
+#
+# Os nomes NEXT_PUBLIC_* sao os que lib/env.ts valida com zod e tem precedencia;
+# o par sem prefixo e aceito como alias porque e o que o EasyPanel ja publica
+# para os servicos do projeto. A resolucao acontece no estagio builder.
+# A chave precisa ser a ANON — o build aborta se receber a service_role.
 
 # ---------------------------------------------------------------------------
 # 1. deps — instala dependencias com o lockfile
