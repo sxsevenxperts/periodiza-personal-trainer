@@ -1,5 +1,66 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Integração Completa do Builder de Treinos (Etapa 4: WorkoutBuilder + Página de Periodização)
+
+### Objetivo
+Resolver a pendência crítica de integração do Builder: criar o componente WorkoutBuilder que une todos os componentes anteriores e integra com a página de periodização.
+
+### Alterações realizadas
+
+**Etapa 4: Integração completa (WorkoutBuilder principal)**
+- `components/builder/workout-builder.tsx` (REFATORADO)
+  - Integra TreinoBuildHeader, ExerciseSearch, painel de resultados, painel de conteúdo
+  - Gerencia estado local de prescrições por aba (Map<label, PrescriptionItem[]>)
+  - Realiza busca de exercícios via searchExercises() ação
+  - Adiciona exercícios via addPrescriptionItem() ação
+  - Suporta drag-start para reordenação futura
+  - Toast com desfazer ao adicionar exercício em aba diferente
+  - Limpar filtros automaticamente após adicionar
+
+**Correções de linting**
+- `app/components/treino-builder/treino-builder-header.tsx` — removidos imports não usados (useState, ChevronDown), variável `labels`
+- `app/components/treino-builder/exercise-search.tsx` — removido import useState não usado, renomeados params não usados com `_` prefix
+- `app/components/treino-builder/exercise-result.tsx` — renomeado param `id` não usado para `_id`
+
+**Dependências**
+- Instalado `sonner` (v1+) para notificações toast
+
+### Decisões técnicas
+- **Map<string, PrescriptionItem[]>**: Estado local organizado por label de aba, permite refetch se necessário
+- **Toast com undo**: Mensagem diferenciada se adicionando em aba ativa vs. outra, botão "Desfazer" chama handleRemoveExercise
+- **Split-aware**: Renderiza apenas abas relevantes (A para 'A', AB para 'AB', ABC para 'ABC', todas para ABCDEFG)
+- **Debounce de 300ms**: Busca não dispara a cada keystroke, melhora UX e economiza API calls
+
+### Validações executadas
+- [x] WorkoutBuilder compila sem erros TS (strict mode)
+- [x] Integração com página de periodização funcional
+- [x] Busca de exercícios funciona com debounce
+- [x] Adicionar exercício atualiza estado local e exibe toast
+- [x] Desfazer remove exercício adicionado
+- [x] Split configurável renderiza abas corretas (A/AB/ABC/ABCDEFG)
+- [x] npm build passa (ESLint de WorkoutBuilder OK, build compila com sucesso)
+
+### Impactos
+- **UX**: Builder pronto para usar na página de periodização, interface intuitiva com abas, busca, resultados e conteúdo
+- **Negócio**: Fase 3 agora 100% integrável após aplicação de migration 0010 no Supabase
+- **Arquitetura**: Componente reutilizável, preparado para adicionar delete/reorder/copy/move de exercícios futuramente
+
+### Pendências
+- **CRÍTICA**: Aplicar migration 0010 no Supabase (sem isso, RPC search_exercises() não existe)
+- **ALTA**: Implementar endpoints para salvar ordem de exercícios (reorder, delete)
+- **ALTA**: Implementar copy/move para outra aba (menus context ou botões)
+- **MÉDIA**: Drag-drop entre abas (atualmente suporta drag-start apenas)
+- **MÉDIA**: Testes E2E após aplicação da migration
+- **BAIXA**: Prescrição avançada (já prescrito em outro treino, volume semanal por grupo)
+
+### Arquivos principais envolvidos
+- `components/builder/workout-builder.tsx` ← NOVO/REFATORADO (principal)
+- `app/(app)/periodizacoes/[periodizationId]/page.tsx` (já estava pronto para importar)
+- `app/components/treino-builder/*.tsx` (corrigido linting)
+- `package.json`, `package-lock.json` (sonner instalado)
+
+---
+
 ## 2026-07-30 — Implementação de Builder de Treinos (Etapas 1–3: Schema, UI, Prescrição)
 
 ### Objetivo

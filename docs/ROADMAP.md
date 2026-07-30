@@ -1,6 +1,6 @@
 # Roadmap — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
-## Atualização — 2026-07-30
+## Atualização — 2026-07-30 (Fase 3 — Integração Completa)
 
 ### Concluído
 - [x] Módulo de Avaliações Físicas criado (schema `client_assessments`, actions `getAssessments` e `createAssessment`).
@@ -10,11 +10,12 @@
 - [x] **ETAPA 1 — Patch ao schema**: Migration 0010 com session.label (A-G), periodizations.split, full-text search (tsvector + unaccent + trigram), RPC search_exercises() com filtros contextuais.
 - [x] **ETAPA 2 — Components React**: TreinoBuildHeader (abas), ExerciseSearch (barra + filtros), ExerciseResult (anotações contextuais). Seletor "Adicionar em:" com sticky behavior.
 - [x] **ETAPA 3 — Lógica de prescrição**: Actions (search, add, get), Motor de cálculo automático (séries/reps/carga/RIR/RPE por objetivo+fase+volume), Hook usePrescriptionBuilder.
+- [x] **ETAPA 4 — Integração completa do Builder**: WorkoutBuilder em `components/builder/workout-builder.tsx` que integra todos os componentes, gerencia estado local de prescrições, integra com actions, suporta drag-drop e toast com desfazer.
 
 ### Em andamento
-- [ ] Integração completa do Builder (listar sessões, salvar abas, ordem de exercícios).
-- [ ] Drag-drop entre abas e reordenação dentro de sessão.
-- [ ] Toast com desfazer ao adicionar exercício para aba diferente.
+- [ ] Aplicar migration 0010 no Supabase (bloqueador crítico para funcionar em produção).
+- [ ] Validar RPC search_exercises() após aplicação da migration.
+- [ ] Testes E2E: criar 7 treinos (A-G), buscar "hip thrust", drag-drop entre abas.
 
 ### Próximos passos
 - [ ] Página de periodização que renderiza o Builder (conexão com microcycle/session/prescription).
