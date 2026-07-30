@@ -9,7 +9,8 @@ em `DIARIO_DE_BORDO.md`.
 ### Concluído (verificado)
 - [x] Módulo de Avaliações Físicas (schema `client_assessments`, actions `getAssessments` / `createAssessment`).
 - [x] Aba de avaliações do Aluno em `/alunos/[clientId]`.
-- [x] **Deploy no EasyPanel destravado**: `Dockerfile` multi-stage + `.dockerignore` + `output: 'standalone'`. O build falhava porque o repositório não tinha Dockerfile. Ver `docs/DEPLOY_EASYPANEL.md`.
+- [x] **Causa raiz da falha de deploy removida**: `Dockerfile` multi-stage + `.dockerignore` + `output: 'standalone'`, agora presentes em `main` (PR #2, merge `3e2cac8`). O build falhava porque o repositório não tinha Dockerfile. Ver `docs/DEPLOY_EASYPANEL.md`.
+  - ⚠️ **Não confirmado**: o `docker build` nunca foi executado (sem daemon Docker no ambiente de desenvolvimento). As premissas foram validadas isoladamente, mas o deploy só se confirma no primeiro build do EasyPanel. Não tratar como concluído até um build verde.
 - [x] **Build de produção passa**: 27 erros de lint pré-existentes corrigidos. `npm run lint`, `npx tsc --noEmit` e `npm run build` limpos — antes o build falhava, o que também quebraria o build Docker do EasyPanel.
 - [x] **Tipagem de domínio real** (`lib/types/dominio.ts`): substitui 19 `any` por tipos que descrevem o runtime. Remover os `eslint-disable` cegos revelou 6 bugs latentes (ex.: `Array.from({ length: null })` quando `series` é nulo).
 - [x] **Migration 0010 corrigida e validada contra PostgreSQL 16 real**: a versão anterior não aplicava — erro de sintaxe em `add constraint if not exists`, tipos `session_label_enum` / `training_split_enum` inexistentes, coluna `restricted_movement_patterns` inexistente, `search_vector` sem backfill, trigram e unaccent nunca aplicados de fato. Matriz de testes em `docs/MIGRATIONS.md`.
@@ -17,6 +18,10 @@ em `DIARIO_DE_BORDO.md`.
 - [x] **Regressão revertida**: `components/builder/workout-builder.tsx` havia sido sobrescrito, perdendo drag-drop real (`@hello-pangea/dnd`), persistência de ordem e os campos editáveis de prescrição. Restaurado.
 - [x] **RPC `search_exercises` conectada à UI**: `catalog-sidebar.tsx` deixou de buscar com `ilike` e passou a usar a RPC, ganhando busca sem acento, tolerância a erro de digitação (trigram), busca por alias e as anotações contextuais (restrito / sem equipamento / já prescrito) renderizadas nos resultados. O contexto (`clientId`, `microcycleId`) desce da página → builder → sidebar.
 - [x] Assinatura da RPC corrigida antes de aplicar: `p_muscle` (texto, comparava por nome) → `p_muscle_id` (uuid). A UI sempre enviou o id do músculo; o filtro por nome nunca teria casado.
+- [x] Corrigida chamada duplicada à busca: dois `useEffect` disparavam no mount do catálogo, gerando duas requisições idênticas por carregamento. Unificados em um.
+- [x] Anotação "já prescrito" deixou de ficar obsoleta: adicionar um exercício agora re-executa a busca, e falhas do `addPrescriptionItem` passaram a exibir mensagem (`role="alert"`) em vez de falhar em silêncio.
+- [x] `aliases_pt` restaurado no resultado da busca: a RPC não os retornava, e a sidebar havia perdido a exibição dos apelidos — que é o que explica por que "hip thrust" traz "Elevação pélvica".
+- [x] `libc6-compat` adicionado no Dockerfile (Alpine usa musl; os binários nativos do SWC esperam glibc). Recomendação do Dockerfile oficial do Next.js, incluída porque o build não pode ser testado aqui.
 - [x] Código morto removido: query malformada de `microcycles` que disparava requisição inválida ao Supabase em todo carregamento da página de periodização.
 
 ### Já existia — registrado por engano como novo
@@ -27,6 +32,7 @@ em `DIARIO_DE_BORDO.md`.
 - Extensões `unaccent` e `pg_trgm` — migration **0001**.
 
 ### Em andamento
+- [ ] **Confirmar o primeiro build no EasyPanel.** O Dockerfile já está em `main`; falta um build verde. Se falhar, o erro agora será um erro real de build (antes era o arquivo ausente). Conferir também que `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` estão cadastrados como **build args** e que o proxy aponta para a porta 3000.
 - [ ] **CRÍTICO — aplicar a migration 0010 no Supabase.** Sem ela a RPC `search_exercises()` não existe. Passo a passo em `docs/MIGRATIONS.md`.
 - [ ] Impor o teto de abas conforme o `split` da periodização e bloquear a 8ª sessão (a UI hoje lista as sessões existentes, sem validar o limite).
 - [ ] **Remover o fallback de busca** em `searchExercises()` depois de aplicar a 0010. Hoje, se a RPC não existir, a busca cai em `ilike` para não derrubar a tela — comportamento degradado e temporário, sinalizado no log do servidor e (em dev) na própria sidebar.

@@ -13,13 +13,21 @@ open Dockerfile: no such file or directory
 (`docker buildx build -f /etc/easypanel/projects/.../code/Dockerfile`), mas o
 repositório não tinha nenhum `Dockerfile`. O app nunca chegava a subir.
 
-**Correção aplicada neste repositório:**
+**Correção aplicada neste repositório** (em `main` desde o merge do PR #2, `3e2cac8`):
 
 | Arquivo | O que faz |
 |---|---|
 | `Dockerfile` | Build multi-stage (deps → builder → runner) do Next.js 15 |
 | `.dockerignore` | Mantém `node_modules`, `.next` e `.env*` fora da imagem |
 | `next.config.mjs` | `output: 'standalone'`, necessário para a imagem enxuta |
+
+> Um segundo sintoma, `No such image: easypanel/startups/periodizacao:latest`,
+> era consequência disso: sem build bem-sucedido, nenhuma imagem era produzida
+> e a etapa de execução não tinha o que iniciar.
+
+O estágio `deps` instala `libc6-compat`: o Alpine usa musl e os binários nativos
+do SWC (compilador do Next) esperam glibc. É a recomendação do Dockerfile
+oficial do Next.js.
 
 ---
 
