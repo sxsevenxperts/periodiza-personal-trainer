@@ -23,7 +23,7 @@ create policy "clients_personal_view" on clients
   using (
     auth.uid() = personal_id
     or (current_user_role() = 'personal' and organization_id in (
-      select organization_id from organization_members where member_id = auth.uid()
+      select organization_id from organization_members where profile_id = auth.uid()
     ))
   );
 

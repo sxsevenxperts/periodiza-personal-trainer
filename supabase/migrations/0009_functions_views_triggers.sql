@@ -18,10 +18,10 @@ create trigger update_sessions_updated_at before update on sessions for each row
 create trigger update_prescription_items_updated_at before update on prescription_items for each row execute function set_updated_at();
 create trigger update_workout_executions_updated_at before update on workout_executions for each row execute function set_updated_at();
 
--- Funcao: current_user_role
-create or replace function current_user_role() returns text as $$
+-- Funcao: current_user_role (matches 0002 definition)
+create or replace function current_user_role() returns public.user_role as $$
   select role from profiles where id = auth.uid();
-$$ language sql stable security definer set search_path = public;
+$$ language sql stable security definer set search_path = pg_catalog, public, pg_temp;
 
 -- Funcao: estimate_1rm (Epley)
 create or replace function estimate_1rm(load numeric, reps integer)
