@@ -96,6 +96,34 @@ integralmente** pelo arquivo gerado. Não edite à mão depois da geração.
 > O seed usa a **service role** e ignora RLS. Rode apenas em desenvolvimento ou em
 > deploy controlado, nunca a partir do browser.
 
+Estado das migrations e como aplicar a 0010: `docs/MIGRATIONS.md`.
+
+---
+
+## Deploy (Docker / EasyPanel)
+
+O repositório traz um `Dockerfile` multi-stage. O `next.config.mjs` usa
+`output: 'standalone'`, então a imagem final roda `node server.js` na porta
+`3000`.
+
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL="https://<host>" \
+  --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="<anon-key>" \
+  -t periodiza .
+
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_SUPABASE_URL="https://<host>" \
+  -e NEXT_PUBLIC_SUPABASE_ANON_KEY="<anon-key>" \
+  periodiza
+```
+
+`NEXT_PUBLIC_*` precisam ser **build args**, não só variáveis de runtime: o Next
+as inlina no bundle do browser durante o build. Passar `SUPABASE_URL` ou
+`SUPABASE_KEY` não funciona — `lib/env.ts` valida os nomes com zod.
+
+Configuração no EasyPanel e diagnóstico de falhas: `docs/DEPLOY_EASYPANEL.md`.
+
 ---
 
 ## Estrutura de pastas

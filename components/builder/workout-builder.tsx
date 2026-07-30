@@ -1,513 +1,168 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { GripVertical, X, Copy, Move } from 'lucide-react'
-import { TreinoBuildHeader, type SessionTab } from '@/app/components/treino-builder/treino-builder-header'
-import { ExerciseSearch, type ExerciseFilter } from '@/app/components/treino-builder/exercise-search'
-import {
-  searchExercises,
-  addPrescriptionItem,
-  deletePrescriptionItem,
-  movePrescriptionItem,
-  copyPrescriptionItem,
-} from '@/app/actions/exercise-actions'
-import { toast } from 'sonner'
+import { useState, useEffect } from 'react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { CatalogSidebar } from './catalog-sidebar'
+import { PrescriptionItemCard } from './prescription-item-card'
+import { Button } from '@/components/ui/button'
+import { DragDropContext, Droppable } from '@hello-pangea/dnd'
+import type { DropResult } from '@hello-pangea/dnd'
+import { updatePrescriptionOrder } from '@/app/(app)/periodizacoes/[periodizationId]/actions'
 
-interface Exercise {
+type Session = {
   id: string
-  name_pt: string
-  primary_muscle_id?: string
+  label: string
+  name: string | null
 }
 
-interface PrescriptionItem {
+type PrescriptionItem = {
   id: string
   session_id: string
   order_index: number
-  series: number
-  reps_min: number
-  reps_max: number
-  load_kg: number
-  rest_seconds: number
-  exercises: Exercise
+  series: number | null
+  reps_min: number | null
+  reps_max: number | null
+  load_kg: number | null
+  rest_seconds: number | null
+  exercises: {
+    id: string
+    name_pt: string
+    primary_muscle_id: string | null
+  } | null
 }
 
-interface WorkoutBuilderProps {
-  periodizationId?: string
+type WorkoutBuilderProps = {
+  periodizationId: string
   split: string
-  sessions: Array<{ id: string; label: string; name: string }>
+  sessions: Session[]
   prescriptionItems: PrescriptionItem[]
 }
 
 export function WorkoutBuilder({
   split,
-  sessions: initialSessions,
-  prescriptionItems: initialPrescriptionItems,
+  sessions,
+  prescriptionItems,
 }: WorkoutBuilderProps) {
-  // State
-  const [activeSessionLabel, setActiveSessionLabel] = useState<string>(
-    initialSessions[0]?.label || 'A'
-  )
-  const [prescriptionItems, setPrescriptionItems] = useState<
-    Map<string, PrescriptionItem[]>
-  >(
-    new Map(
-      initialSessions.map((s) => [
-        s.label,
-        initialPrescriptionItems.filter((p) => {
-          const session = initialSessions.find((ss) => ss.id === p.session_id)
-          return session?.label === s.label
-        }),
-      ])
-    )
-  )
-  const [searchResults, setSearchResults] = useState<Array<Exercise & { notes?: string[] }>>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [filters, setFilters] = useState<ExerciseFilter>({
-    query: '',
-    onlyAvailable: false,
-  })
-  const [draggedItem, setDraggedItem] = useState<{
-    sessionLabel: string
-    itemId: string
-  } | null>(null)
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const defaultTab = sessions.length > 0 ? sessions[0]?.label || 'A' : 'A'
+  const [activeTabLabel, setActiveTabLabel] = useState(defaultTab)
+  const [localItems, setLocalItems] = useState(prescriptionItems)
 
-  // Get session tabs for header
-  const sessionTabs: SessionTab[] = initialSessions
-    .slice(0, split === 'A' ? 1 : split === 'AB' ? 2 : split === 'ABC' ? 3 : 7)
-    .map((s) => ({
-      label: (s.label as 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'),
-      name: s.name || `Treino ${s.label}`,
-      exerciseCount: prescriptionItems.get(s.label)?.length || 0,
-      isActive: activeSessionLabel === s.label,
-    }))
-
-  const maxSessions = split === 'A' ? 1 : split === 'AB' ? 2 : split === 'ABC' ? 3 : 7
-
-  // Search exercises on filter change
   useEffect(() => {
-    const performSearch = async () => {
-      if (filters.query.length < 2 && !filters.category && !filters.muscle && !filters.equipment) {
-        setSearchResults([])
-        return
+    setLocalItems(prescriptionItems)
+  }, [prescriptionItems])
+
+  // Encontra o ID da sessão ativa baseado na aba atual
+  const activeSession = sessions.find(s => s.label === activeTabLabel)
+  const activeSessionId = activeSession?.id || ''
+
+  const onDragEnd = async (result: DropResult) => {
+    if (!result.destination) return
+
+    const sourceIndex = result.source.index
+    const destinationIndex = result.destination.index
+    const droppableId = result.source.droppableId
+
+    if (sourceIndex === destinationIndex) return
+
+    const newItems = Array.from(localItems)
+    
+    const sessionItems = newItems
+      .filter((item) => item.session_id === droppableId)
+      .sort((a, b) => a.order_index - b.order_index)
+
+    const [movedItem] = sessionItems.splice(sourceIndex, 1)
+    if (!movedItem) return
+    sessionItems.splice(destinationIndex, 0, movedItem)
+
+    sessionItems.forEach((item, index) => {
+      item.order_index = index
+      const globalIndex = newItems.findIndex((i) => i.id === item.id)
+      if (globalIndex !== -1) {
+        newItems[globalIndex] = item
       }
-
-      setIsSearching(true)
-      try {
-        const results = await searchExercises({
-          query: filters.query,
-          categoryFilter: filters.category,
-          movementFilter: filters.movement,
-          muscleFilter: filters.muscle,
-          equipmentFilter: filters.equipment,
-        })
-        setSearchResults(results || [])
-      } catch (error) {
-        console.error('Search error:', error)
-        toast.error('Erro ao buscar exercícios')
-        setSearchResults([])
-      } finally {
-        setIsSearching(false)
-      }
-    }
-
-    const timer = setTimeout(performSearch, 300)
-    return () => clearTimeout(timer)
-  }, [filters])
-
-  // Handle remove exercise
-  const handleRemoveExercise = useCallback((sessionLabel: string, itemId: string) => {
-    setPrescriptionItems((prev) => {
-      const updated = new Map(prev)
-      const items = updated.get(sessionLabel) || []
-      updated.set(
-        sessionLabel,
-        items.filter((item) => item.id !== itemId)
-      )
-      return updated
     })
 
-    // Call server action to delete from DB
-    deletePrescriptionItem(itemId).catch((error) => {
-      console.error('Delete error:', error)
-      toast.error('Erro ao deletar exercício')
-    })
+    setLocalItems(newItems)
 
-    toast.success('Exercício removido')
-  }, [])
-
-  // Handle move exercise to another session
-  const handleMoveExercise = useCallback(
-    (fromLabel: string, itemId: string, toLabel: string) => {
-      if (fromLabel === toLabel) return
-
-      setPrescriptionItems((prev) => {
-        const updated = new Map(prev)
-        const fromItems = updated.get(fromLabel) || []
-        const toItems = updated.get(toLabel) || []
-
-        const itemToMove = fromItems.find((item) => item.id === itemId)
-        if (!itemToMove) return prev
-
-        updated.set(
-          fromLabel,
-          fromItems.filter((item) => item.id !== itemId)
-        )
-        updated.set(toLabel, [...toItems, itemToMove])
-
-        return updated
-      })
-
-      // Get target session ID
-      const targetSession = initialSessions.find((s) => s.label === toLabel)
-      if (targetSession) {
-        movePrescriptionItem(itemId, targetSession.id).catch((error) => {
-          console.error('Move error:', error)
-          toast.error('Erro ao mover exercício')
-        })
-      }
-
-      toast.success(`Exercício movido para Treino ${toLabel}`)
-    },
-    [initialSessions]
-  )
-
-  // Handle copy exercise to another session
-  const handleCopyExercise = useCallback(
-    (fromLabel: string, itemId: string, toLabel: string) => {
-      const targetSession = initialSessions.find((s) => s.label === toLabel)
-      if (!targetSession) return
-
-      // Call server action to copy
-      copyPrescriptionItem(itemId, targetSession.id)
-        .then((newItem) => {
-          if (newItem && Array.isArray(newItem) && newItem.length > 0) {
-            setPrescriptionItems((prev) => {
-              const updated = new Map(prev)
-              const toItems = updated.get(toLabel) || []
-              updated.set(toLabel, [...toItems, newItem[0]])
-              return updated
-            })
-            toast.success(`Exercício copiado para Treino ${toLabel}`)
-          }
-        })
-        .catch((error) => {
-          console.error('Copy error:', error)
-          toast.error('Erro ao copiar exercício')
-        })
-    },
-    [initialSessions]
-  )
-
-  // Handle add exercise
-  const handleAddExercise = useCallback(
-    async (exercise: Exercise, destinationLabel?: string) => {
-      const targetLabel = destinationLabel || activeSessionLabel
-      const currentLabel = activeSessionLabel
-
-      try {
-        const session = initialSessions.find((s) => s.label === targetLabel)
-        if (!session) return
-
-        // Call server action
-        const newItem = await addPrescriptionItem(
-          session.id,
-          exercise.id,
-          undefined,
-          {
-            series: 3,
-            reps_min: 8,
-            reps_max: 12,
-            load_kg: 0,
-            rest_seconds: 90,
-          }
-        )
-
-        // Update local state
-        if (newItem && Array.isArray(newItem) && newItem.length > 0) {
-          setPrescriptionItems((prev) => {
-            const updated = new Map(prev)
-            const items = updated.get(targetLabel) || []
-            updated.set(targetLabel, [...items, newItem[0]])
-            return updated
-          })
-        }
-
-        // Show toast if adding to different tab
-        if (targetLabel !== currentLabel) {
-          toast.success(`Exercício adicionado a Treino ${targetLabel}`, {
-            description: 'Clique para desfazer',
-            action: {
-              label: 'Desfazer',
-              onClick: () => {
-                if (newItem && Array.isArray(newItem) && newItem.length > 0) {
-                  handleRemoveExercise(targetLabel, newItem[0].id)
-                }
-              },
-            },
-          })
-        } else {
-          toast.success('Exercício adicionado!')
-        }
-
-        setFilters({ ...filters, query: '' })
-        setSearchResults([])
-      } catch (error) {
-        console.error('Add exercise error:', error)
-        toast.error('Erro ao adicionar exercício')
-      }
-    },
-    [activeSessionLabel, initialSessions, filters, handleRemoveExercise]
-  )
-
-  // Handle drag start
-  const handleDragStart = (sessionLabel: string, itemId: string) => {
-    setDraggedItem({ sessionLabel, itemId })
+    await updatePrescriptionOrder(
+      sessionItems.map((i) => ({
+        id: i.id,
+        order_index: i.order_index,
+        session_id: i.session_id,
+      }))
+    )
   }
-
-  // Handle drop on session tab (after moving between sessions)
-  const _handleDropOnTab = (targetLabel: string) => {
-    if (!draggedItem) return
-
-    const { sessionLabel: sourceLabel, itemId } = draggedItem
-
-    if (sourceLabel === targetLabel) {
-      setDraggedItem(null)
-      return
-    }
-
-    // Move item between sessions
-    setPrescriptionItems((prev) => {
-      const updated = new Map(prev)
-      const sourceItems = updated.get(sourceLabel) || []
-      const targetItems = updated.get(targetLabel) || []
-
-      const itemToMove = sourceItems.find((item) => item.id === itemId)
-      if (!itemToMove) return prev
-
-      updated.set(
-        sourceLabel,
-        sourceItems.filter((item) => item.id !== itemId)
-      )
-      updated.set(targetLabel, [...targetItems, itemToMove])
-
-      return updated
-    })
-
-    toast.success(`Exercício movido para Treino ${targetLabel}`)
-    setDraggedItem(null)
-  }
-
-  // Get current session items
-  const currentItems = prescriptionItems.get(activeSessionLabel) || []
 
   return (
-    <div className="flex flex-col h-screen bg-neutral-950 rounded-lg overflow-hidden border border-neutral-800">
-      {/* Header with tabs */}
-      <div
-        onDragOver={(e) => {
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'move'
-        }}
-      >
-        <TreinoBuildHeader
-          sessions={sessionTabs}
-          onTabChange={(label) => setActiveSessionLabel(label)}
-          onAddSession={() => {
-            // If we reach max sessions, show error
-            if (sessionTabs.length >= maxSessions) {
-              toast.error(`Máximo de ${maxSessions} treino(s) para essa divisão`)
-            }
-          }}
-          split={split}
-          canAddMore={sessionTabs.length < maxSessions}
-        />
+    <div className="flex flex-col lg:flex-row gap-6">
+      <div className="w-full lg:w-80 shrink-0">
+        <CatalogSidebar activeSessionId={activeSessionId} />
       </div>
 
-      {/* Search bar */}
-      <ExerciseSearch
-        filters={filters}
-        onFilterChange={setFilters}
-        categories={[]}
-        movements={[]}
-        muscles={[]}
-        equipments={[]}
-      />
+      <div className="flex-1 flex flex-col space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold tracking-tight">Divisão atual: {split}</h2>
+          <Button variant="outline" size="sm">Alterar Divisão</Button>
+        </div>
 
-      <div className="flex flex-1 min-h-0">
-        {/* Search results */}
-        <div className="w-1/3 border-r border-neutral-800 overflow-y-auto bg-neutral-900">
-          <div className="p-4">
-            {isSearching && (
-              <div className="text-sm text-neutral-500 animate-pulse">Buscando...</div>
-            )}
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Tabs value={activeTabLabel} onValueChange={setActiveTabLabel} className="w-full">
+            <TabsList className="mb-4">
+              {sessions.map((session) => (
+                <TabsTrigger key={session.id} value={session.label}>
+                  Treino {session.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            {sessions.map((session) => {
+              const sessionItems = localItems
+                .filter((item) => item.session_id === session.id)
+                .sort((a, b) => a.order_index - b.order_index)
 
-            {searchResults.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-3">
-                  {searchResults.length} resultado(s)
-                </h3>
-                {searchResults.map((exercise) => (
-                  <div
-                    key={exercise.id}
-                    className="p-3 bg-neutral-800 rounded-md hover:bg-neutral-700 transition-colors cursor-pointer group"
-                    onClick={() => handleAddExercise(exercise, activeSessionLabel)}
-                  >
-                    <p className="text-sm font-medium text-neutral-100">{exercise.name_pt}</p>
-                    {exercise.notes && exercise.notes.length > 0 && (
-                      <div className="flex gap-1 mt-2 flex-wrap">
-                        {exercise.notes.map((note, idx) => (
-                          <span
-                            key={idx}
-                            className="text-xs px-2 py-1 bg-neutral-700 text-neutral-300 rounded"
-                          >
-                            {note}
-                          </span>
-                        ))}
+              return (
+                <TabsContent key={session.id} value={session.label} className="space-y-6">
+                  <div className="flex justify-between items-center bg-zinc-950 p-4 rounded-lg border border-zinc-800">
+                    <div>
+                      <h3 className="font-medium text-amber-500">Treino {session.label}</h3>
+                      <p className="text-sm text-zinc-400">
+                        {session.name || 'Personalize o nome deste bloco...'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Droppable droppableId={session.id}>
+                    {(provided) => (
+                      <div 
+                        {...provided.droppableProps} 
+                        ref={provided.innerRef}
+                        className="min-h-[300px] pb-24"
+                      >
+                        {sessionItems.length === 0 ? (
+                          <div className="text-center py-12 text-zinc-500 border-2 border-dashed border-zinc-800 rounded-lg">
+                            Nenhum exercício neste treino. Busque no catálogo ao lado e adicione.
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-3">
+                            {sessionItems.map((item, index) => (
+                              <PrescriptionItemCard
+                                key={item.id}
+                                item={item}
+                                index={index}
+                                sessions={sessions}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {provided.placeholder}
                       </div>
                     )}
-                    <button
-                      className="mt-2 w-full py-1 bg-gradient-gold-h text-neutral-900 text-xs font-semibold rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleAddExercise(exercise, activeSessionLabel)
-                      }}
-                    >
-                      Adicionar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!isSearching && filters.query && searchResults.length === 0 && (
-              <div className="text-sm text-neutral-500 text-center py-8">
-                Nenhum exercício encontrado
-              </div>
-            )}
-
-            {!isSearching && !filters.query && (
-              <div className="text-sm text-neutral-600 text-center py-8">
-                Digite para buscar exercícios
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Session content */}
-        <div className="flex-1 overflow-y-auto bg-neutral-950 p-4">
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold text-neutral-100 mb-4">
-              Treino {activeSessionLabel}
-            </h2>
-
-            {currentItems.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-neutral-500">Nenhum exercício adicionado</p>
-                <p className="text-neutral-600 text-sm mt-2">Busque um exercício no painel à esquerda</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {currentItems.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    draggable
-                    onDragStart={() => handleDragStart(activeSessionLabel, item.id)}
-                    className="group flex items-start gap-3 p-3 bg-neutral-800 rounded-md hover:bg-neutral-700 transition-colors border border-neutral-700 cursor-move"
-                  >
-                    <GripVertical size={18} className="text-neutral-600 mt-1 opacity-0 group-hover:opacity-100" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-neutral-100">
-                        {idx + 1}. {item.exercises.name_pt}
-                      </p>
-                      <div className="flex gap-2 mt-1 text-xs text-neutral-400">
-                        <span>{item.series} séries</span>
-                        <span>×</span>
-                        <span>
-                          {item.reps_min}–{item.reps_max} reps
-                        </span>
-                        {item.load_kg > 0 && (
-                          <>
-                            <span>×</span>
-                            <span>{item.load_kg} kg</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative">
-                      {/* Copy dropdown */}
-                      <div className="relative">
-                        <button
-                          onClick={() => setOpenMenuId(openMenuId === `copy-${item.id}` ? null : `copy-${item.id}`)}
-                          className="p-1 hover:bg-neutral-600 rounded text-neutral-400 hover:text-neutral-200"
-                          title="Copiar para outra aba"
-                        >
-                          <Copy size={16} />
-                        </button>
-                        {openMenuId === `copy-${item.id}` && (
-                          <div className="absolute right-0 top-full mt-1 bg-neutral-800 border border-neutral-700 rounded-md shadow-lg z-50 min-w-[120px]">
-                            {sessionTabs
-                              .filter((s) => s.label !== activeSessionLabel)
-                              .map((session) => (
-                                <button
-                                  key={`copy-${session.label}`}
-                                  onClick={() => {
-                                    handleCopyExercise(activeSessionLabel, item.id, session.label)
-                                    setOpenMenuId(null)
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-xs hover:bg-neutral-700 text-neutral-300"
-                                >
-                                  Treino {session.label}
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Move dropdown */}
-                      <div className="relative">
-                        <button
-                          onClick={() => setOpenMenuId(openMenuId === `move-${item.id}` ? null : `move-${item.id}`)}
-                          className="p-1 hover:bg-neutral-600 rounded text-neutral-400 hover:text-neutral-200"
-                          title="Mover para outra aba"
-                        >
-                          <Move size={16} />
-                        </button>
-                        {openMenuId === `move-${item.id}` && (
-                          <div className="absolute right-0 top-full mt-1 bg-neutral-800 border border-neutral-700 rounded-md shadow-lg z-50 min-w-[120px]">
-                            {sessionTabs
-                              .filter((s) => s.label !== activeSessionLabel)
-                              .map((session) => (
-                                <button
-                                  key={`move-${session.label}`}
-                                  onClick={() => {
-                                    handleMoveExercise(activeSessionLabel, item.id, session.label)
-                                    setOpenMenuId(null)
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-xs hover:bg-neutral-700 text-neutral-300"
-                                >
-                                  Treino {session.label}
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Delete button */}
-                      <button
-                        onClick={() => handleRemoveExercise(activeSessionLabel, item.id)}
-                        className="p-1 hover:bg-red-500/20 rounded text-neutral-400 hover:text-red-400"
-                        title="Remover"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+                  </Droppable>
+                </TabsContent>
+              )
+            })}
+          </Tabs>
+        </DragDropContext>
       </div>
     </div>
   )

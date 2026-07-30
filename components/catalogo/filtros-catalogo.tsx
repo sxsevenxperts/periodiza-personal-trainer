@@ -12,13 +12,10 @@ import {
 } from '@/components/ui/select'
 import { useDebounce } from '@/hooks/use-debounce'
 import { Search } from 'lucide-react'
+import type { MetadataCatalogo } from '@/lib/types/dominio'
 
 interface FiltrosCatalogoProps {
-  metadata: {
-    patterns: any[]
-    regions: any[]
-    muscles: any[]
-  }
+  metadata: MetadataCatalogo
 }
 
 export function FiltrosCatalogo({ metadata }: FiltrosCatalogoProps) {

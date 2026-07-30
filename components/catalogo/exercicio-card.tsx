@@ -1,9 +1,10 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Dumbbell, Info, Layers } from 'lucide-react'
+import { Dumbbell, Layers } from 'lucide-react'
+import type { ExercicioCatalogo } from '@/lib/types/dominio'
 
 interface ExercicioCardProps {
-  exercicio: any
+  exercicio: ExercicioCatalogo
 }
 
 export function ExercicioCard({ exercicio }: ExercicioCardProps) {
@@ -18,7 +19,7 @@ export function ExercicioCard({ exercicio }: ExercicioCardProps) {
             )}
           </div>
           
-          {exercicio.variantCount > 0 && (
+          {!!exercicio.variantCount && exercicio.variantCount > 0 && (
             <Badge variant="outline" className="shrink-0 bg-zinc-950 border-zinc-800 text-zinc-300 gap-1">
               <Layers className="w-3 h-3" />
               {exercicio.variantCount} {exercicio.variantCount === 1 ? 'Variante' : 'Variantes'}

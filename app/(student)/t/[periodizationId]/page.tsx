@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getStudentPeriodization } from './actions'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { PlayCircle, Calendar, Clock, ArrowRight } from 'lucide-react'
+import { Calendar, Clock, ArrowRight } from 'lucide-react'
+import type { SessaoAluno } from '@/lib/types/dominio'
 
 interface PageProps {
   params: Promise<{ periodizationId: string }>
@@ -44,7 +44,7 @@ export default async function StudentDashboardPage({ params }: PageProps) {
             <p className="text-zinc-500 text-center py-8">Nenhum treino planejado para esta semana.</p>
           )}
           
-          {sessions.map((session: any) => (
+          {sessions.map((session: SessaoAluno) => (
             <Card key={session.id} className="bg-zinc-900 border-zinc-800 overflow-hidden">
               <CardContent className="p-0">
                 <Link href={`/t/${periodizationId}/treinar/${session.id}`} className="flex flex-col p-4 hover:bg-zinc-800/50 transition-colors">

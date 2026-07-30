@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Gera .next/standalone com apenas as dependencias usadas em runtime.
+  // Necessario para a imagem Docker enxuta usada no deploy (EasyPanel).
+  output: 'standalone',
   eslint: {
     dirs: ['app', 'components', 'lib', 'scripts'],
   },

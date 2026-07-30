@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input'
 import { searchExercises, addPrescriptionItem, getMuscles } from '@/app/(app)/periodizacoes/[periodizationId]/actions'
 import { Search, Plus, Loader2 } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import type { ExercicioBusca, ItemTaxonomia } from '@/lib/types/dominio'
 
 export function CatalogSidebar({ activeSessionId }: { activeSessionId: string }) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<any[]>([])
-  const [muscles, setMuscles] = useState<any[]>([])
+  const [results, setResults] = useState<ExercicioBusca[]>([])
+  const [muscles, setMuscles] = useState<ItemTaxonomia[]>([])
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [isAdding, setIsAdding] = useState<string | null>(null)
@@ -92,8 +93,8 @@ export function CatalogSidebar({ activeSessionId }: { activeSessionId: string })
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-medium text-sm text-zinc-100 leading-tight">{exercise.name_pt}</p>
-                  {exercise.aliases_pt?.length > 0 && (
-                    <p className="text-xs text-zinc-500 mt-1 line-clamp-1">{exercise.aliases_pt.join(', ')}</p>
+                  {!!exercise.aliases_pt?.length && (
+                    <p className="text-xs text-zinc-500 mt-1 line-clamp-1">{exercise.aliases_pt?.join(', ')}</p>
                   )}
                 </div>
                 <Button 

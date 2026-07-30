@@ -1,107 +1,192 @@
 -- 0010_session_label_and_search.sql
--- Adiciona session.label (A-G), periodizations.split e full-text search para exercícios
+-- Reforça o dominio de sessions.label (A-G) e periodizations.split, e entrega
+-- a busca full-text de exercicios (search_vector + RPC search_exercises).
+--
+-- IMPORTANTE — o que JA existe nas migrations anteriores e NAO e recriado aqui:
+--   * sessions.label ................ 0005 (text not null)
+--   * unique (microcycle_id, label) .. 0005
+--   * periodizations.split .......... 0005 (text default 'ABC')
+--   * exercises.search_vector ....... 0004 (tsvector)
+--   * exercises_search_gin .......... 0004 (gin em search_vector)
+--   * exercises_name_trgm ........... 0004 (gin em name_pt, gin_trgm_ops)
+--   * unaccent / pg_trgm ............ 0001 (schema "extensions")
+-- Esta migration apenas adiciona o que falta e e idempotente.
 
--- Session label enum (já criado em 0001, mas verificamos aqui)
-alter table sessions 
-  add column if not exists label session_label_enum not null default 'A';
+-- ---------------------------------------------------------------------------
+-- 1. Dominio de sessions.label (A-G) e periodizations.split
+-- ---------------------------------------------------------------------------
+-- As colunas ja existem como text. Em vez de converter para enum (reescreve a
+-- tabela e quebra dados fora do dominio), aplicamos CHECK constraints, que
+-- entregam a mesma garantia com custo e risco menores.
 
-alter table sessions
-  add constraint if not exists sessions_microcycle_label_unique unique (microcycle_id, label);
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'sessions_label_check'
+  ) then
+    alter table sessions
+      add constraint sessions_label_check
+      check (label in ('A','B','C','D','E','F','G'));
+  end if;
+end
+$$;
 
--- Training split para periodization
-alter table periodizations
-  add column if not exists split training_split_enum not null default 'ABC';
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'periodizations_split_check'
+  ) then
+    alter table periodizations
+      add constraint periodizations_split_check
+      check (split in ('A','AB','ABC','ABCD','ABCDE','ABCDEF','ABCDEFG'));
+  end if;
+end
+$$;
 
--- Full-text search: search_vector em exercises
-alter table exercises
-  add column if not exists search_vector tsvector;
+-- ---------------------------------------------------------------------------
+-- 2. Padroes de movimento restritos na anamnese
+-- ---------------------------------------------------------------------------
+-- Necessario para a anotacao contextual "restrito" no resultado da busca.
+-- A UI de anamnese que popula esta coluna faz parte da Fase 4.
+alter table client_anamnesis
+  add column if not exists restricted_movement_patterns text[] not null default '{}';
 
--- Trigger para manter search_vector atualizado
+comment on column client_anamnesis.restricted_movement_patterns is
+  'Slugs de movement_patterns contraindicados para o aluno. Alimenta a anotacao "restrito" em search_exercises().';
+
+-- ---------------------------------------------------------------------------
+-- 3. search_vector: trigger + backfill
+-- ---------------------------------------------------------------------------
+-- unaccent() e schema-qualificado porque a extensao vive em "extensions" e o
+-- search_path da funcao nao inclui esse schema.
 create or replace function update_exercises_search_vector()
 returns trigger as $$
 begin
-  new.search_vector := (
-    setweight(to_tsvector('portuguese', coalesce(new.name_pt, '')), 'A') ||
-    setweight(to_tsvector('portuguese', coalesce(array_to_string(new.aliases_pt, ' '), '')), 'B') ||
-    setweight(to_tsvector('portuguese', coalesce(new.name_en, '')), 'C') ||
-    setweight(to_tsvector('portuguese', coalesce(
-      (select name_pt from muscles where id = new.primary_muscle_id), ''
-    )), 'D')
-  );
+  new.search_vector :=
+      setweight(to_tsvector('portuguese', extensions.unaccent(coalesce(new.name_pt, ''))), 'A')
+   || setweight(to_tsvector('portuguese', extensions.unaccent(coalesce(array_to_string(new.aliases_pt, ' '), ''))), 'B')
+   || setweight(to_tsvector('portuguese', extensions.unaccent(coalesce(new.name_en, ''))), 'C')
+   || setweight(to_tsvector('portuguese', extensions.unaccent(coalesce(
+        (select m.name_pt from muscles m where m.id = new.primary_muscle_id), ''
+      ))), 'D');
   return new;
 end;
 $$ language plpgsql;
 
+comment on function update_exercises_search_vector is
+  'Mantem exercises.search_vector. Aplica unaccent para que "gluteo" encontre "gluteo" com acento.';
+
 drop trigger if exists update_exercises_search_vector_trigger on exercises;
 create trigger update_exercises_search_vector_trigger
-  before insert or update on exercises
+  before insert or update of name_pt, name_en, aliases_pt, primary_muscle_id
+  on exercises
   for each row
   execute function update_exercises_search_vector();
 
--- Índices
-create index if not exists exercises_search_vector_idx on exercises using gin (search_vector);
-create index if not exists exercises_name_pt_trgm_idx on exercises using gin (name_pt gin_trgm_ops);
+-- Backfill: o trigger so dispara em insert/update, logo as linhas ja existentes
+-- ficariam com search_vector nulo e a busca nao retornaria nada.
+-- "set name_pt = name_pt" e intencional: satisfaz o "update of name_pt" do
+-- trigger (que olha as colunas citadas no SET, nao se o valor mudou).
+update exercises set name_pt = name_pt where search_vector is null;
 
--- RPC: search_exercises(query, filters, client_id)
+-- ---------------------------------------------------------------------------
+-- 4. RPC search_exercises
+-- ---------------------------------------------------------------------------
+-- Assinatura anterior removida explicitamente: os nomes dos parametros mudaram
+-- (prefixo p_) e "create or replace" nao substitui uma funcao com outra
+-- assinatura, deixaria duas versoes coexistindo.
+drop function if exists search_exercises(text, text, text, text, text, uuid);
+
+-- security INVOKER (padrao, nao DEFINER): a funcao le anamnese e equipamentos
+-- do aluno, entao precisa herdar as permissoes de quem chama. O join
+-- obrigatorio em clients (que tem RLS) garante que um personal nao consegue
+-- ler o contexto de um aluno de outra organizacao passando um client_id
+-- arbitrario — sem a linha em clients, as anotacoes saem como false.
 create or replace function search_exercises(
-  query_text text default '',
-  category_filter text default null,
-  movement_filter text default null,
-  muscle_filter text default null,
-  equipment_filter text default null,
-  client_id uuid default null
+  p_query          text default '',
+  p_category       text default null,
+  p_movement       text default null,
+  p_muscle         text default null,
+  p_equipment      text default null,
+  p_client_id      uuid default null,
+  p_microcycle_id  uuid default null,
+  p_limit          integer default 50
 )
 returns table (
-  exercise_id uuid,
-  name_pt text,
-  name_en text,
-  primary_muscle text,
-  movement_pattern text,
-  equipment text[],
-  technical_level text,
-  has_restriction boolean,
-  missing_equipment boolean,
-  already_prescribed boolean,
-  weekly_volume_series integer
+  out_exercise_id          uuid,
+  out_name_pt              text,
+  out_name_en              text,
+  out_primary_muscle       text,
+  out_movement_pattern     text,
+  out_equipment            text[],
+  out_technical_level      text,
+  out_has_restriction      boolean,
+  out_missing_equipment    boolean,
+  out_already_prescribed   boolean,
+  out_weekly_volume_series integer
 ) as $$
 declare
-  search_query tsquery;
+  v_termo  text    := extensions.unaccent(coalesce(trim(p_query), ''));
+  v_query  tsquery := case
+                        when v_termo = '' then null
+                        else plainto_tsquery('portuguese', v_termo)
+                      end;
 begin
-  search_query := plainto_tsquery('portuguese', query_text);
-
   return query
   select
     e.id,
     e.name_pt,
     e.name_en,
-    (select name_pt from muscles where id = e.primary_muscle_id),
+    mus.name_pt,
     mp.name_pt,
     e.equipment_slugs,
     e.technical_level,
-    -- 🔴 Padrão restrito na anamnese
-    case when ca.restricted_movement_patterns @> array[mp.slug] then true else false end,
-    -- 🟡 Sem equipamento disponível
-    case when not (cea.available_equipment_slugs @> e.equipment_slugs) then true else false end,
-    -- 🔵 Já prescrito em outro treino do mesmo microciclo (TBD: adicionar quando temos client_id)
-    false,
-    -- ⚪ Volume de séries semanais no grupo muscular (TBD: implementar agregação)
+    -- restrito: padrao de movimento contraindicado na anamnese
+    coalesce(mp.slug = any (ca.restricted_movement_patterns), false),
+    -- sem equipamento: o aluno nao tem todo o equipamento exigido
+    case
+      when cea.client_id is null then false
+      when coalesce(array_length(e.equipment_slugs, 1), 0) = 0 then false
+      else not (cea.available_equipment_slugs @> e.equipment_slugs)
+    end,
+    -- ja prescrito: exercicio presente em outra sessao do mesmo microciclo
+    case
+      when p_microcycle_id is null then false
+      else exists (
+        select 1
+        from prescription_items pi
+        join sessions s on s.id = pi.session_id
+        where s.microcycle_id = p_microcycle_id
+          and pi.exercise_id = e.id
+      )
+    end,
+    -- volume semanal por grupo muscular: agregacao pendente (Fase 4)
     0
   from exercises e
-  left join movement_patterns mp on e.movement_pattern_id = mp.id
-  left join client_anamnesis ca on ca.client_id = client_id
-  left join client_equipment_access cea on cea.client_id = client_id
+  left join movement_patterns mp on mp.id = e.movement_pattern_id
+  left join muscles          mus on mus.id = e.primary_muscle_id
+  -- clients entra para que o RLS filtre o contexto do aluno
+  left join clients                c   on c.id = p_client_id
+  left join client_anamnesis       ca  on ca.client_id = c.id
+  left join client_equipment_access cea on cea.client_id = c.id
   where
-    (query_text = '' or e.search_vector @@ search_query)
-    and (category_filter is null or e.catalog_group = category_filter)
-    and (movement_filter is null or mp.slug = movement_filter)
-    and (muscle_filter is null or e.primary_muscle_id = (select id from muscles where name_pt = muscle_filter))
-    and (equipment_filter is null or e.equipment_slugs @> array[equipment_filter])
+    e.is_active is true
+    and (
+      v_query is null
+      or e.search_vector @@ v_query
+      -- tolerancia a erro de digitacao ("agacahmento" -> "Agachamento")
+      or extensions.similarity(extensions.unaccent(e.name_pt), v_termo) > 0.3
+    )
+    and (p_category  is null or e.catalog_group = p_category)
+    and (p_movement  is null or mp.slug = p_movement)
+    and (p_muscle    is null or mus.name_pt = p_muscle)
+    and (p_equipment is null or e.equipment_slugs @> array[p_equipment])
   order by
-    case when query_text != '' then ts_rank(e.search_vector, search_query) else 0 end desc,
+    case when v_query is null then 0 else ts_rank(e.search_vector, v_query) end desc,
     e.name_pt asc
-  limit 50;
+  limit greatest(coalesce(p_limit, 50), 1);
 end;
-$$ language plpgsql stable security definer set search_path = public;
+$$ language plpgsql stable set search_path = public, extensions;
 
-comment on function search_exercises is 'Busca full-text de exercícios com filtros e contexto do aluno. Retorna anotações: 🔴 restrito, 🟡 sem equipamento, 🔵 já prescrito, ⚪ volume.';
-
+comment on function search_exercises is
+  'Busca full-text de exercicios (unaccent + trigram) com filtros e contexto do aluno. Anotacoes: restrito, sem equipamento, ja prescrito. Volume semanal ainda retorna 0 (Fase 4).';

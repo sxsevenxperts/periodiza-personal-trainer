@@ -8,13 +8,26 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Trash2, GripVertical } from 'lucide-react'
-import { updatePrescriptionItem, removePrescriptionItem } from '@/app/(app)/periodizacoes/[periodizationId]/actions'
+import { Trash2, GripVertical, CornerUpRight, Copy, Loader2 } from 'lucide-react'
+import {
+  updatePrescriptionItem,
+  removePrescriptionItem,
+  movePrescriptionItem,
+  copyPrescriptionItem,
+} from '@/app/(app)/periodizacoes/[periodizationId]/actions'
 import { Draggable } from '@hello-pangea/dnd'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+
+type SessionOption = {
+  id: string
+  label: string
+}
 
 type PrescriptionItemCardProps = {
   item: any
   index: number
+  /** Demais sessões (abas) da semana, para "Mover para…" e "Copiar para…". */
+  sessions?: SessionOption[]
 }
 
 // Simple debounce helper
@@ -26,8 +39,95 @@ function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
   }
 }
 
-export function PrescriptionItemCard({ item, index }: PrescriptionItemCardProps) {
+/**
+ * Popover de destino para "Mover para…" / "Copiar para…" (abas A-G).
+ */
+function TransferPopover({
+  modo,
+  destinos,
+  pendente,
+  onSelecionar,
+}: {
+  modo: 'mover' | 'copiar'
+  destinos: SessionOption[]
+  pendente: boolean
+  onSelecionar: (sessionId: string) => void
+}) {
+  const [aberto, setAberto] = useState(false)
+  const titulo = modo === 'mover' ? 'Mover para…' : 'Copiar para…'
+  const Icone = modo === 'mover' ? CornerUpRight : Copy
+
+  return (
+    <Popover open={aberto} onOpenChange={setAberto}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-zinc-400 hover:text-amber-500 hover:bg-amber-500/10"
+          disabled={pendente}
+          title={titulo}
+          aria-label={titulo}
+        >
+          {pendente ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Icone className="w-4 h-4" />
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-44 p-1 bg-zinc-950 border-zinc-800">
+        <p className="px-2 py-1.5 text-[10px] font-bold uppercase text-zinc-500">
+          {titulo}
+        </p>
+        {destinos.map((destino) => (
+          <button
+            key={destino.id}
+            type="button"
+            onClick={() => {
+              setAberto(false)
+              onSelecionar(destino.id)
+            }}
+            className="w-full rounded px-2 py-1.5 text-left text-sm text-zinc-200 hover:bg-amber-500/10 hover:text-amber-500 transition-colors"
+          >
+            Treino {destino.label}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+export function PrescriptionItemCard({ item, index, sessions = [] }: PrescriptionItemCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
+  const [transferPendente, setTransferPendente] = useState<'mover' | 'copiar' | null>(null)
+  const [erroTransfer, setErroTransfer] = useState<string | null>(null)
+
+  // Destinos possíveis: todas as abas menos a que o item já ocupa.
+  const destinos = sessions.filter((s) => s.id !== item.session_id)
+
+  const handleTransfer = async (
+    modo: 'mover' | 'copiar',
+    targetSessionId: string,
+  ) => {
+    setErroTransfer(null)
+    setTransferPendente(modo)
+    try {
+      const resultado =
+        modo === 'mover'
+          ? await movePrescriptionItem(item.id, targetSessionId)
+          : await copyPrescriptionItem(item.id, targetSessionId)
+
+      if (resultado && 'error' in resultado && resultado.error) {
+        setErroTransfer(
+          modo === 'mover' ? 'Falha ao mover exercício.' : 'Falha ao copiar exercício.',
+        )
+      }
+    } catch {
+      setErroTransfer('Erro inesperado. Tente novamente.')
+    } finally {
+      setTransferPendente(null)
+    }
+  }
   
   // Debounced update to avoid spamming the database on every keystroke
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -82,16 +182,40 @@ export function PrescriptionItemCard({ item, index }: PrescriptionItemCardProps)
                   )}
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-red-400 hover:text-red-300 hover:bg-red-400/10 h-8 w-8"
-                onClick={handleDelete}
-                disabled={isDeleting}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                {destinos.length > 0 && (
+                  <>
+                    <TransferPopover
+                      modo="copiar"
+                      destinos={destinos}
+                      pendente={transferPendente === 'copiar'}
+                      onSelecionar={(sessionId) => handleTransfer('copiar', sessionId)}
+                    />
+                    <TransferPopover
+                      modo="mover"
+                      destinos={destinos}
+                      pendente={transferPendente === 'mover'}
+                      onSelecionar={(sessionId) => handleTransfer('mover', sessionId)}
+                    />
+                  </>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-red-400 hover:text-red-300 hover:bg-red-400/10 h-8 w-8"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
+
+            {erroTransfer && (
+              <p role="alert" className="text-xs text-red-400">
+                {erroTransfer}
+              </p>
+            )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
               <div className="space-y-1">

@@ -32,15 +32,7 @@ export default async function PaginaPeriodizacao({
     redirect('/dashboard') // Handle 404 or redirect appropriately
   }
 
-  // 2. Load the microcycle (assuming the current one or we just load sessions for now).
-  // For MVP, we load the first microcycle of this periodization.
-  const { data: microcycles } = await supabase
-    .from('microcycles')
-    .select('id, week_number')
-    .eq('mesocycle_id', (
-      supabase.from('mesocycles').select('id').eq('periodization_id', periodizationId) as any // Simplification for MVP, ideal is a join
-    ))
-  // Wait, Supabase allows joins:
+  // 2. Carrega o primeiro microciclo da periodizacao (MVP: uma semana por vez).
   const { data: currentMicrocycle } = await supabase
     .from('microcycles')
     .select(`

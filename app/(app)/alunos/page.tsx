@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { CabecalhoPagina } from '@/components/layout/cabecalho-pagina'
-import { Button, classesBotao } from '@/components/ui/button'
-import { PlusCircle, Users, Activity, User } from 'lucide-react'
+import { classesBotao } from '@/components/ui/button'
+import { Users, Activity, User } from 'lucide-react'
 import { getAlunos } from './actions'
 import { NovoAlunoDialog } from '@/components/alunos/novo-aluno-dialog'
 
