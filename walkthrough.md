@@ -20,6 +20,13 @@
   - Inputs iteráveis e botões circulares interativos para o aluno dar "Check" nas séries.
   - Botão de "Finalizar Treino" que atualiza o `status` da session para "concluida" no banco.
 
+## Fase 6: Listagem do Catálogo de Exercícios
+- Modificada a rota `/catalogo` para buscar e renderizar a lista canônica de exercícios (tabela `exercises`).
+- Implementado suporte a **Filtros e Busca por URL (Server-Side Filtering)**:
+  - Os parâmetros da URL (`?q=`, `?pattern=`, `?region=`, `?muscle=`) ditam a resposta do Supabase, o que facilita o compartilhamento de links e previne gargalos no cliente quando a base de dados crescer.
+- Adicionado componente `<FiltrosCatalogo>` na renderização do lado do cliente com input de busca (debounced) e dropdowns preenchidos dinamicamente (`movement_patterns`, `body_regions`, `muscles`).
+- Adicionado componente `<ExercicioCard>` para renderizar os atributos: Padrão, Grupo, Região, Músculo Primário, Equipamentos e contagem de Variantes.
+
 ## Próximos Passos
 - Conectar o módulo de Avaliação Física de forma mais robusta (Fase Adicional / Refinamento).
 - Validar as RLS com múltiplos perfis usando a autenticação de forma completa.

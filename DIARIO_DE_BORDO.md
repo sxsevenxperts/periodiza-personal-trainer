@@ -1,8 +1,9 @@
 # Diário de Bordo - Periodiza
 
-## Data: 29 de Julho de 2026 (Parte 4)
+## Data: 29 de Julho de 2026 (Parte 4 e 5)
 - **Fase 4 Concluída:** Implementamos a listagem de Alunos, o modal de criação rápida e o perfil completo do Aluno (incluindo abas de Anamnese e Avaliações). A página de Nova Periodização foi integrada, passando a buscar clientes dinamicamente no banco, inserindo no banco e gerando automaticamente a estrutura em cascata de mesociclos e microciclos associados ao split selecionado.
 - **Fase 5 Concluída:** Criado o fluxo voltado para o Aluno (`app/(student)`), simulando o Magic Link via `periodizationId`. Adicionada uma dashboard minimalista para o aluno ver os treinos da semana, e uma página de Execução rica, onde o usuário consegue rolar entre os exercícios, verificar as metas (Séries, Reps, RIR/RPE) e assinalar as séries completas como checks, com a conclusão alterando o status da session no Supabase para 'concluida'.
+- **Fase 6 Concluída:** Implementada a listagem rica do Catálogo de Exercícios em `/catalogo`. A página conta com Server-Side Filtering, mantendo o estado dos filtros (pesquisa textual via _trgm_, padrões, regiões e músculos) na URL. Uma UI baseada em `Cards` foi adicionada para exibir todos os metadados e tags (equipamentos e afins) dos exercícios vindos do Supabase.
 
 # Diário de Bordo — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
