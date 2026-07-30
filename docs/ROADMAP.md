@@ -31,7 +31,7 @@ Fluxo completo: cliente cria conta → escolhe personal → solicita treino → 
 ### Autenticação
 
 - [ ] Auth Supabase: sign-up cliente, sign-up personal, login, logout, reset de senha
-- [ ] Tela de login: dark + gold gradiente, branding DOUTOR LUIZ C. JÚNIOR
+- [x] Tela de login: dark + gold gradiente, branding DOUTOR LUIZ C. JÚNIOR
 - [ ] Tela de sign-up: separar fluxo cliente vs personal, validação CREF para personal
 - [ ] Middleware: protege rotas, redireciona não-autenticados para login, redireciona por role
 

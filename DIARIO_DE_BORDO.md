@@ -1,6 +1,34 @@
 # Diário de Bordo — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
-## 2026-07-29 — Resolução de Conflitos, Migrations no Supabase e Seed do Catálogo
+## 2026-07-29 — Implementação da Página de Login (Fase 2a Parcial)
+
+### Objetivo
+A pedido do Product Owner, antecipamos a construção visual e funcional da tela de Login (gateway do profissional) para acomodar a identidade da marca e integrar com Supabase Auth.
+
+### Alterações realizadas
+- **UI de Login (`page.tsx`)**: Substituído o placeholder por um layout premium "split-screen". Metade da tela com o formulário em tons escuros (zinc-950) e a outra metade exibindo a foto do Dr. Luiz C. Júnior (`/dr-luiz.png`) com overlay gradiente e citação de impacto.
+- **Client Component (`login-form.tsx`)**: Criado formulário de autenticação utilizando os novos hooks do React 19 (`useActionState`) para gerenciamento de estado assíncrono.
+- **Server Actions (`actions.ts`)**: Implementada a rota segura de autenticação `login` utilizando `zod` para validação e chamando `supabase.auth.signInWithPassword` (usando o cliente do servidor correto `criarClienteServidor`). Redirecionamento automático para o `/dashboard` em caso de sucesso.
+
+### Decisões técnicas
+- **React 19 Hooks**: Optamos por usar `useActionState` para conectar nativamente o form action às promises do servidor, evitando bibliotecas terceiras de form management (como React Hook Form) para um fluxo de login simples.
+- **Server Actions**: O fluxo de Auth roda exclusivamente no lado do servidor, aumentando a segurança (sem exposição de credenciais client-side) e utilizando a gestão segura de cookies já configurada no middleware.
+
+### Validações executadas
+- **TypeScript e ESLint**: Executados `npm run typecheck` e `npm run lint`. Foram corrigidas assinaturas tipadas (`LoginState`) e regras do ESLint (imports não utilizados e quotes). Resultado: 100% de sucesso.
+- O build Next.js foi reavaliado indiretamente por meio do linter e do typecheck rigoroso.
+
+### Impactos
+- O sistema agora tem a porta de entrada para a área logada dos profissionais totalmente conectada com o Auth do Supabase.
+
+### Pendências
+- Testar a submissão real de um login (quando o usuário profissional for criado na base).
+- Retomar o plano do Builder de Treinos (SPEC-01).
+
+### Arquivos principais envolvidos
+- `app/(auth)/login/page.tsx`
+- `app/(auth)/login/login-form.tsx`
+- `app/(auth)/login/actions.ts`
 
 ### Objetivo
 Resolver conflitos de esquema com a base legada (CRM) no Supabase (Easypanel), garantir que as migrations sejam idempotentes e seguras, e popular a base com o catálogo de 104 exercícios.
