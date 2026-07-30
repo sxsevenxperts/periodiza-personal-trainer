@@ -1,5 +1,126 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Conecta a RPC search_exercises ao catálogo do builder
+
+### Objetivo
+A migration 0010 entregou a RPC `search_exercises` com busca sem acento,
+tolerância a erro de digitação e anotações contextuais do aluno, mas nenhuma
+tela a consumia — o catálogo lateral do builder ainda buscava com `ilike`.
+Esta entrada registra a conexão da RPC à interface.
+
+### Alterações realizadas
+
+**`app/(app)/periodizacoes/[periodizationId]/actions.ts`**
+- `searchExercises(query, muscleId, contexto?)` agora chama a RPC via
+  `supabase.rpc('search_exercises', ...)` em vez de montar um `ilike`.
+- Novo parâmetro `contexto: { clientId, microcycleId }`, que habilita as
+  anotações de restrição/equipamento e a de "já prescrito".
+- `mapearResultadoBusca()` normaliza as colunas `out_*` da RPC para o shape que
+  a UI consome.
+- `buscarExerciciosSimplificado()` — fallback por `ilike`, acionado somente
+  quando a RPC não existe no banco (migration não aplicada). Retorna
+  `buscaSimplificada: true` e grava um aviso explícito no log do servidor.
+
+**`supabase/migrations/0010_session_label_and_search.sql`**
+- `p_muscle text` → `p_muscle_id uuid`, e o filtro passou de
+  `mus.name_pt = p_muscle` para `e.primary_muscle_id = p_muscle_id`.
+- Adicionado `drop function if exists` para a assinatura de 8 argumentos, para
+  que a troca de nome de parâmetro não deixe duas versões coexistindo.
+
+**`components/builder/catalog-sidebar.tsx`**
+- Recebe `clientId` e `microcycleId` e os repassa à busca.
+- Busca centralizada em `executarBusca()` com `useCallback`, eliminando a
+  duplicação entre a carga inicial e o re-disparo por filtro.
+- Renderiza as anotações contextuais como etiquetas ("Restrito", "Sem
+  equipamento", "Já prescrito"), cada uma com `title` explicando o motivo, no
+  padrão zinc/amber do projeto.
+- Exibe o músculo primário e o padrão de movimento no resultado.
+- Aviso discreto de "busca simplificada" quando o fallback é acionado, visível
+  apenas fora de produção.
+
+**`components/builder/workout-builder.tsx` e a página do builder**
+- `clientId` e `microcycleId` descem da página → builder → sidebar.
+- A página passou a selecionar `client_id` na query de `periodizations`.
+
+**`lib/types/dominio.ts`**
+- `ExercicioBusca` ganhou os campos de anotação, opcionais — o fallback por
+  `ilike` não os produz.
+
+### Decisões técnicas
+- **Fallback em vez de quebra**: a 0010 ainda não está aplicada em produção. Se
+  a busca chamasse a RPC sem alternativa, o catálogo pararia de funcionar no
+  próximo deploy. O fallback preserva a tela; o registro no log e o aviso em
+  desenvolvimento evitam que a degradação passe despercebida. É código de
+  transição, marcado para remoção no roadmap.
+- **Detecção restrita da falha**: o fallback só entra quando o erro indica
+  função ausente (`PGRST202` ou mensagem citando `search_exercises`). Qualquer
+  outro erro é propagado como falha, para não mascarar problema real.
+- **`p_muscle_id` em vez de `p_muscle`**: a UI sempre enviou o id do músculo;
+  comparar por `name_pt` nunca casaria, e comparar por nome é frágil a
+  renomeações. Corrigido na própria 0010, que ainda não foi aplicada — não
+  precisou de migration nova.
+- **Anotações como etiquetas com `title`**: a spec pedia marcadores de cor
+  (vermelho/amarelo/azul). Texto curto com cor e tooltip comunica o motivo sem
+  depender só da cor, o que também ajuda quem não distingue as cores.
+
+### Validações executadas
+
+| Verificação | Resultado |
+|---|---|
+| `npx tsc --noEmit` | 0 erros |
+| `npm run lint` | 0 erros, 0 avisos |
+| `npm run build` | sucesso, 11/11 páginas |
+| `npm test` | sem arquivos de teste no projeto (inalterado) |
+
+Migration revalidada do zero contra **PostgreSQL 16 real**, com as 10 migrations
+aplicadas em sequência sobre banco novo:
+
+- 0001–0010: todas aplicam sem erro.
+- Busca: nome exato, alias ("hip thrust" → Elevação pélvica), erro de digitação
+  ("agacahmento" → Agachamento livre), sem acento ("gluteo" → Elevação pélvica).
+- `p_muscle_id` com UUID filtra corretamente; com `null` devolve tudo.
+- Chamada com exatamente os 5 parâmetros nomeados que a action envia resolve
+  para a função (os demais usam default).
+- Apenas uma assinatura registrada em `pg_proc` — os `drop function` fizeram efeito.
+- Confirmado que o erro de função ausente cita o nome da função, o que valida o
+  casamento por mensagem usado no fallback.
+
+**Não verificado:** o caminho do fallback em execução real contra o PostgREST
+do Supabase — depende de um ambiente com a 0010 ausente e o app rodando. A
+condição de detecção foi verificada apenas no nível da mensagem de erro do
+PostgreSQL.
+
+### Impactos
+- **Usuário**: buscar "gluteo" acha "Glúteo", "agacahmento" acha "Agachamento" e
+  "hip thrust" acha "Elevação pélvica". O resultado avisa quando o exercício é
+  contraindicado na anamnese, quando o aluno não tem o equipamento e quando já
+  está prescrito em outro treino da semana — antes de adicionar.
+- **Negócio**: a busca contextual da SPEC-01 sai do banco e chega à tela.
+- **Arquitetura**: a lógica de filtro e anotação vive no banco, numa função
+  `security invoker` que respeita RLS; a UI só apresenta.
+
+### Pendências
+- **A 0010 continua não aplicada no Supabase.** Até isso acontecer, a busca roda
+  em modo simplificado — sem acento, typo, alias nem anotações.
+- Remover o fallback `ilike` depois de aplicar a 0010.
+- `out_weekly_volume_series` ainda retorna 0 (agregação = Fase 4).
+- `client_anamnesis.restricted_movement_patterns` não é preenchida por nenhuma
+  tela (UI de anamnese = Fase 4); sem dados, a anotação "Restrito" nunca aparece.
+- Nenhum teste automatizado existe no projeto.
+- **EasyPanel**: o build segue falhando porque aponta para `main`, onde o
+  Dockerfile não existe. Ver relatório da sessão.
+
+### Arquivos principais envolvidos
+- `app/(app)/periodizacoes/[periodizationId]/actions.ts`
+- `components/builder/catalog-sidebar.tsx`
+- `components/builder/workout-builder.tsx`
+- `app/(app)/periodizacoes/[periodizationId]/page.tsx`
+- `lib/types/dominio.ts`
+- `supabase/migrations/0010_session_label_and_search.sql`
+- `docs/MIGRATIONS.md`, `docs/ROADMAP.md`
+
+---
+
 ## 2026-07-30 — Revisão corretiva da Fase 3 e destrave do deploy no EasyPanel
 
 ### Objetivo

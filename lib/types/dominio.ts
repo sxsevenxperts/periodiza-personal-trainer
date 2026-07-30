@@ -38,12 +38,28 @@ export interface MetadataCatalogo {
   muscles: ItemTaxonomia[]
 }
 
-/** Exercicio no formato retornado pela busca do catalogo lateral do builder. */
+/**
+ * Exercicio no formato retornado pela busca do catalogo lateral do builder.
+ *
+ * Os campos de anotacao vem da RPC `search_exercises` (migration 0010). Ficam
+ * opcionais porque a busca de contingencia por `ilike` nao os produz.
+ */
 export interface ExercicioBusca {
   id: string
   name_pt: string
   aliases_pt?: string[] | null
   primary_muscle_id?: string | null
+  primary_muscle?: string | null
+  movement_pattern?: string | null
+  equipment?: string[] | null
+  technical_level?: string | null
+  /** Padrao de movimento contraindicado na anamnese do aluno. */
+  has_restriction?: boolean
+  /** O aluno nao tem todo o equipamento exigido. */
+  missing_equipment?: boolean
+  /** Ja prescrito em outro treino do mesmo microciclo. */
+  already_prescribed?: boolean
+  weekly_volume_series?: number
 }
 
 /** Avaliacao fisica, na forma exibida pela listagem do aluno. */

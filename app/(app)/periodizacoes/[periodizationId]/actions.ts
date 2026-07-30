@@ -105,30 +105,106 @@ export async function getMuscles() {
   return { data }
 }
 
-export async function searchExercises(query: string, muscleId?: string | null) {
+export interface ContextoBusca {
+  /** Aluno da periodizacao. Habilita as anotacoes de restricao e equipamento. */
+  clientId?: string | null
+  /** Microciclo (semana) atual. Habilita a anotacao "ja prescrito". */
+  microcycleId?: string | null
+}
+
+/**
+ * Busca de exercicios via RPC `search_exercises` (migration 0010).
+ *
+ * Ganhos sobre a busca anterior por `ilike`:
+ *   - sem acento: "gluteo" encontra "Glúteo"
+ *   - erro de digitacao: "agacahmento" encontra "Agachamento" (trigram)
+ *   - alias: "hip thrust" encontra "Elevação pélvica"
+ *   - anotacoes contextuais do aluno (restrito / sem equipamento / ja prescrito)
+ *
+ * FALLBACK TEMPORARIO: enquanto a migration 0010 nao for aplicada, a funcao
+ * nao existe no banco e o Supabase responde PGRST202. Nesse caso caimos na
+ * busca antiga por `ilike` para nao derrubar a tela, sinalizando via
+ * `buscaSimplificada`. Remover este fallback depois de aplicar a 0010
+ * (ver docs/MIGRATIONS.md).
+ */
+export async function searchExercises(
+  query: string,
+  muscleId?: string | null,
+  contexto?: ContextoBusca,
+) {
   const supabase = (await criarClienteServidor()) as any
-  
-  let q = supabase
-    .from('exercises')
-    .select('id, name_pt, aliases_pt, primary_muscle_id')
-    
-  if (query.trim().length > 0) {
-    // using unaccent + trgm or just ilike for MVP
-    q = q.ilike('name_pt', `%${query}%`)
+
+  const { data, error } = await supabase.rpc('search_exercises', {
+    p_query: query ?? '',
+    p_muscle_id: muscleId || null,
+    p_client_id: contexto?.clientId || null,
+    p_microcycle_id: contexto?.microcycleId || null,
+    p_limit: 30,
+  })
+
+  if (!error) {
+    return {
+      data: (data ?? []).map(mapearResultadoBusca),
+      buscaSimplificada: false,
+    }
   }
 
+  const funcaoAusente =
+    error.code === 'PGRST202' || /search_exercises/i.test(error.message ?? '')
+
+  if (!funcaoAusente) {
+    console.error('Error searching exercises (RPC):', error)
+    return { data: [], buscaSimplificada: false }
+  }
+
+  console.warn(
+    'RPC search_exercises indisponivel — migration 0010 provavelmente nao ' +
+      'aplicada. Usando busca simplificada (ilike), sem unaccent, trigram ou ' +
+      'anotacoes. Ver docs/MIGRATIONS.md.',
+  )
+
+  return { ...(await buscarExerciciosSimplificado(query, muscleId)), buscaSimplificada: true }
+}
+
+/** Normaliza as colunas `out_*` da RPC para o shape que a UI consome. */
+function mapearResultadoBusca(linha: any) {
+  return {
+    id: linha.out_exercise_id as string,
+    name_pt: linha.out_name_pt as string,
+    aliases_pt: null,
+    primary_muscle_id: null,
+    primary_muscle: linha.out_primary_muscle as string | null,
+    movement_pattern: linha.out_movement_pattern as string | null,
+    equipment: (linha.out_equipment ?? []) as string[],
+    technical_level: linha.out_technical_level as string | null,
+    has_restriction: Boolean(linha.out_has_restriction),
+    missing_equipment: Boolean(linha.out_missing_equipment),
+    already_prescribed: Boolean(linha.out_already_prescribed),
+    weekly_volume_series: Number(linha.out_weekly_volume_series ?? 0),
+  }
+}
+
+/** Busca de contingencia, sem as capacidades da 0010. */
+async function buscarExerciciosSimplificado(query: string, muscleId?: string | null) {
+  const supabase = (await criarClienteServidor()) as any
+
+  let q = supabase.from('exercises').select('id, name_pt, aliases_pt, primary_muscle_id')
+
+  if (query.trim().length > 0) {
+    q = q.ilike('name_pt', `%${query}%`)
+  }
   if (muscleId) {
     q = q.eq('primary_muscle_id', muscleId)
   }
 
-  const { data, error } = await q.limit(20)
+  const { data, error } = await q.limit(30)
 
   if (error) {
-    console.error('Error searching exercises:', error)
+    console.error('Error searching exercises (fallback):', error)
     return { data: [] }
   }
 
-  return { data }
+  return { data: data ?? [] }
 }
 
 /**

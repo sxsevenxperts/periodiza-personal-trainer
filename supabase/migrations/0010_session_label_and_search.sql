@@ -96,6 +96,7 @@ update exercises set name_pt = name_pt where search_vector is null;
 -- (prefixo p_) e "create or replace" nao substitui uma funcao com outra
 -- assinatura, deixaria duas versoes coexistindo.
 drop function if exists search_exercises(text, text, text, text, text, uuid);
+drop function if exists search_exercises(text, text, text, text, text, uuid, uuid, integer);
 
 -- security INVOKER (padrao, nao DEFINER): a funcao le anamnese e equipamentos
 -- do aluno, entao precisa herdar as permissoes de quem chama. O join
@@ -106,7 +107,7 @@ create or replace function search_exercises(
   p_query          text default '',
   p_category       text default null,
   p_movement       text default null,
-  p_muscle         text default null,
+  p_muscle_id      uuid default null,
   p_equipment      text default null,
   p_client_id      uuid default null,
   p_microcycle_id  uuid default null,
@@ -179,7 +180,7 @@ begin
     )
     and (p_category  is null or e.catalog_group = p_category)
     and (p_movement  is null or mp.slug = p_movement)
-    and (p_muscle    is null or mus.name_pt = p_muscle)
+    and (p_muscle_id is null or e.primary_muscle_id = p_muscle_id)
     and (p_equipment is null or e.equipment_slugs @> array[p_equipment])
   order by
     case when v_query is null then 0 else ts_rank(e.search_vector, v_query) end desc,

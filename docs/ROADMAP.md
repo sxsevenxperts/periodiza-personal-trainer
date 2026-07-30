@@ -15,6 +15,8 @@ em `DIARIO_DE_BORDO.md`.
 - [x] **Migration 0010 corrigida e validada contra PostgreSQL 16 real**: a versão anterior não aplicava — erro de sintaxe em `add constraint if not exists`, tipos `session_label_enum` / `training_split_enum` inexistentes, coluna `restricted_movement_patterns` inexistente, `search_vector` sem backfill, trigram e unaccent nunca aplicados de fato. Matriz de testes em `docs/MIGRATIONS.md`.
 - [x] **Mover / Copiar exercício entre abas A–G**: `movePrescriptionItem` e `copyPrescriptionItem` no arquivo canônico de actions, com recálculo de `order_index` e `revalidatePath`; UI via Popover em `PrescriptionItemCard`.
 - [x] **Regressão revertida**: `components/builder/workout-builder.tsx` havia sido sobrescrito, perdendo drag-drop real (`@hello-pangea/dnd`), persistência de ordem e os campos editáveis de prescrição. Restaurado.
+- [x] **RPC `search_exercises` conectada à UI**: `catalog-sidebar.tsx` deixou de buscar com `ilike` e passou a usar a RPC, ganhando busca sem acento, tolerância a erro de digitação (trigram), busca por alias e as anotações contextuais (restrito / sem equipamento / já prescrito) renderizadas nos resultados. O contexto (`clientId`, `microcycleId`) desce da página → builder → sidebar.
+- [x] Assinatura da RPC corrigida antes de aplicar: `p_muscle` (texto, comparava por nome) → `p_muscle_id` (uuid). A UI sempre enviou o id do músculo; o filtro por nome nunca teria casado.
 - [x] Código morto removido: query malformada de `microcycles` que disparava requisição inválida ao Supabase em todo carregamento da página de periodização.
 
 ### Já existia — registrado por engano como novo
@@ -26,8 +28,8 @@ em `DIARIO_DE_BORDO.md`.
 
 ### Em andamento
 - [ ] **CRÍTICO — aplicar a migration 0010 no Supabase.** Sem ela a RPC `search_exercises()` não existe. Passo a passo em `docs/MIGRATIONS.md`.
-- [ ] **Consumir a RPC na UI.** `catalog-sidebar.tsx` ainda busca com `ilike`: sem unaccent, sem trigram, sem anotações contextuais. A RPC está pronta e testada, mas nenhuma tela a chama.
 - [ ] Impor o teto de abas conforme o `split` da periodização e bloquear a 8ª sessão (a UI hoje lista as sessões existentes, sem validar o limite).
+- [ ] **Remover o fallback de busca** em `searchExercises()` depois de aplicar a 0010. Hoje, se a RPC não existir, a busca cai em `ilike` para não derrubar a tela — comportamento degradado e temporário, sinalizado no log do servidor e (em dev) na própria sidebar.
 
 ### Próximos passos
 - [ ] Suíte de testes automatizados. `vitest` está configurado mas **não existe nenhum arquivo de teste** (`npm test` sai com código 1).
@@ -42,6 +44,7 @@ em `DIARIO_DE_BORDO.md`.
 - **Débito**: `lib/types/database.ts` segue `any`, com exceção de lint documentada e restrita a uma linha. Um shape parcial derruba o inferimento de todas as queries do `@supabase/ssr`; só os tipos gerados resolvem.
 - **Débito**: o parser de tipos do Supabase infere relações to-one como array; há dois casts documentados na fronteira de dados (`app/(app)/catalogo/page.tsx` e página de execução do aluno).
 - **Débito**: motor de prescrição é básico e não está conectado ao fluxo.
+- **Débito**: o fallback `ilike` na busca é código de transição. Enquanto existir, uma falha real da RPC (que não seja "função ausente") também degrada silenciosamente para a busca simples.
 - **Risco**: `docker build` não foi executado — o ambiente de desenvolvimento não tem daemon Docker. As premissas do Dockerfile foram validadas individualmente (saída standalone, caminhos de `COPY`, arranque com `node server.js`, HTTP 200 em `/` e `/login`), mas a construção da imagem só se confirma no primeiro build do EasyPanel.
 
 ---

@@ -37,6 +37,10 @@ select count(*) as sem_vector from exercises where search_vector is null;
 
 -- RPC responde
 select out_name_pt from search_exercises('agachamento') limit 5;
+
+-- RPC com o contexto do aluno (anotacoes preenchidas)
+select out_name_pt, out_has_restriction, out_missing_equipment
+  from search_exercises('', p_client_id => '<uuid-do-aluno>');
 ```
 
 ---
@@ -71,9 +75,9 @@ temporária), sobre o schema reconstruído a partir das migrations 0001–0009:
 | nome exato | `search_exercises('Agachamento')` | Agachamento livre |
 | alias | `search_exercises('hip thrust')` | Elevação pélvica |
 | erro de digitação (trigram) | `search_exercises('agacahmento')` | Agachamento livre |
-| sem acento (unaccent) | `search_exercises('gluteo')` | ambos os exercícios |
+| sem acento (unaccent) | `search_exercises('gluteo')` | Elevação pélvica (músculo "Glúteo máximo" entra no vetor) |
 | sem acento composto | `search_exercises('elevacao pelvica')` | Elevação pélvica |
-| filtro por músculo | `p_muscle => 'Glúteo máximo'` | ambos |
+| filtro por músculo | `p_muscle_id => '<uuid>'` | só o do músculo pedido |
 | filtro por equipamento ausente | `p_equipment => 'halter'` | vazio |
 | anotação "restrito" | aluno com `extensao-quadril` restrito | Elevação pélvica = true |
 | anotação "sem equipamento" | aluno só com `barra` | Agachamento livre = true |
@@ -92,13 +96,45 @@ equipamentos daquele aluno. Isso foi verificado no teste de isolamento acima.
 
 ---
 
+## Quem consome a RPC
+
+`components/builder/catalog-sidebar.tsx` → `searchExercises(query, muscleId, { clientId, microcycleId })`
+em `app/(app)/periodizacoes/[periodizationId]/actions.ts`.
+
+O contexto vem da página do builder: `clientId` de `periodizations.client_id` e
+`microcycleId` do microciclo exibido. Sem eles a busca funciona, mas as
+anotações saem todas `false`.
+
+Assinatura em uso:
+
+```
+search_exercises(
+  p_query          text     default '',
+  p_category       text     default null,
+  p_movement       text     default null,
+  p_muscle_id      uuid     default null,
+  p_equipment      text     default null,
+  p_client_id      uuid     default null,
+  p_microcycle_id  uuid     default null,
+  p_limit          integer  default 50
+)
+```
+
+Colunas de retorno usam prefixo `out_` para não colidir com os nomes das
+colunas das tabelas dentro do corpo da função. A action normaliza esse prefixo
+antes de entregar à UI.
+
+---
+
 ## Pendências conhecidas na 0010
 
 - `out_weekly_volume_series` retorna sempre `0`. A agregação de volume semanal
   por grupo muscular é trabalho da Fase 4.
-- A RPC ainda **não é consumida pela UI**. O catálogo lateral do builder
-  (`components/builder/catalog-sidebar.tsx`) usa `searchExercises()` com
-  `ilike`, que não tem unaccent, trigram nem as anotações contextuais. Trocar o
-  consumo é o próximo passo da Fase 3.
+- **Fallback temporário no app**: `searchExercises()` chama a RPC e, se ela não
+  existir (migration não aplicada), cai numa busca por `ilike` para não derrubar
+  a tela. Em desenvolvimento a sidebar mostra um aviso discreto; em produção o
+  aviso fica só no log do servidor. **Remover o fallback depois de aplicar a
+  0010** — ele está em `app/(app)/periodizacoes/[periodizationId]/actions.ts`,
+  na função `buscarExerciciosSimplificado`.
 - `client_anamnesis.restricted_movement_patterns` existe mas nenhuma tela a
   preenche ainda (UI de anamnese = Fase 4).

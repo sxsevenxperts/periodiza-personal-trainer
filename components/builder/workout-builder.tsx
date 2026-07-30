@@ -33,12 +33,18 @@ type PrescriptionItem = {
 
 type WorkoutBuilderProps = {
   periodizationId: string
+  /** Aluno da periodizacao — habilita as anotacoes contextuais da busca. */
+  clientId?: string | null
+  /** Microciclo exibido — habilita a anotacao "ja prescrito". */
+  microcycleId?: string | null
   split: string
   sessions: Session[]
   prescriptionItems: PrescriptionItem[]
 }
 
 export function WorkoutBuilder({
+  clientId,
+  microcycleId,
   split,
   sessions,
   prescriptionItems,
@@ -96,7 +102,11 @@ export function WorkoutBuilder({
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="w-full lg:w-80 shrink-0">
-        <CatalogSidebar activeSessionId={activeSessionId} />
+        <CatalogSidebar
+          activeSessionId={activeSessionId}
+          clientId={clientId}
+          microcycleId={microcycleId}
+        />
       </div>
 
       <div className="flex-1 flex flex-col space-y-6">

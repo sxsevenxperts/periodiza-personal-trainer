@@ -24,7 +24,7 @@ export default async function PaginaPeriodizacao({
   // 1. Load the periodization and its split
   const { data: periodization } = await supabase
     .from('periodizations')
-    .select('id, name, split, status')
+    .select('id, name, split, status, client_id')
     .eq('id', periodizationId)
     .single()
 
@@ -87,6 +87,8 @@ export default async function PaginaPeriodizacao({
       <div className="mt-6">
         <WorkoutBuilder 
           periodizationId={periodization.id}
+          clientId={periodization.client_id}
+          microcycleId={currentMicrocycle.id}
           split={periodization.split || 'ABC'}
           sessions={sessions || []}
           prescriptionItems={prescriptionItems || []}
