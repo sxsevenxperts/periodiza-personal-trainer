@@ -73,7 +73,7 @@ temporária), sobre o schema reconstruído a partir das migrations 0001–0009:
 | Cenário | Consulta | Resultado |
 |---|---|---|
 | nome exato | `search_exercises('Agachamento')` | Agachamento livre |
-| alias | `search_exercises('hip thrust')` | Elevação pélvica |
+| alias | `search_exercises('hip thrust')` | Elevação pélvica, com `out_aliases_pt` = {hip thrust, ponte de glúteo} |
 | erro de digitação (trigram) | `search_exercises('agacahmento')` | Agachamento livre |
 | sem acento (unaccent) | `search_exercises('gluteo')` | Elevação pélvica (músculo "Glúteo máximo" entra no vetor) |
 | sem acento composto | `search_exercises('elevacao pelvica')` | Elevação pélvica |
@@ -119,6 +119,11 @@ search_exercises(
   p_limit          integer  default 50
 )
 ```
+
+Colunas de retorno: `out_exercise_id`, `out_name_pt`, `out_name_en`,
+`out_aliases_pt`, `out_primary_muscle`, `out_movement_pattern`,
+`out_equipment`, `out_technical_level`, `out_has_restriction`,
+`out_missing_equipment`, `out_already_prescribed`, `out_weekly_volume_series`.
 
 Colunas de retorno usam prefixo `out_` para não colidir com os nomes das
 colunas das tabelas dentro do corpo da função. A action normaliza esse prefixo

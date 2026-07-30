@@ -15,6 +15,9 @@
 # ---------------------------------------------------------------------------
 FROM node:20-alpine AS deps
 WORKDIR /app
+# libc6-compat: o Alpine usa musl, e os binarios nativos do SWC (compilador do
+# Next) esperam glibc. Recomendacao do Dockerfile oficial do Next.js.
+RUN apk add --no-cache libc6-compat
 COPY package.json package-lock.json ./
 RUN npm ci
 
@@ -23,6 +26,7 @@ RUN npm ci
 # ---------------------------------------------------------------------------
 FROM node:20-alpine AS builder
 WORKDIR /app
+RUN apk add --no-cache libc6-compat
 
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY

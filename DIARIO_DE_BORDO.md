@@ -1,5 +1,114 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-30 — Merge em main, auditoria da própria rodada e correção de 4 defeitos
+
+### Objetivo
+Levar o Dockerfile a `main` (única forma de o EasyPanel enxergá-lo) e auditar
+criticamente o trabalho feito nesta sessão, incluindo o que eu mesmo escrevi.
+
+### Diagnóstico do erro reportado
+`No such image: easypanel/startups/periodizacao:latest` não era um problema
+novo. O EasyPanel executa build e depois run; como o build falhava por falta do
+Dockerfile, nenhuma imagem era produzida e a etapa de run não tinha o que
+iniciar. Verificado que `origin/main` estava em `ad17ab8`, sem Dockerfile,
+enquanto o arquivo existia só na branch do PR.
+
+### Alterações realizadas
+
+**Merge**
+- PR #2 mesclado em `main` (merge commit `3e2cac8`), com autorização explícita.
+  Confirmado após o merge que `main` contém `Dockerfile`, `.dockerignore`,
+  `output: 'standalone'` e a 0010 com `p_muscle_id`.
+
+**Defeitos encontrados na auditoria e corrigidos**
+
+1. `components/builder/catalog-sidebar.tsx` — dois `useEffect` disparavam no
+   mount, ambos chamando `executarBusca` com os mesmos argumentos: **duas
+   requisições idênticas por carregamento**. Unificados num único efeito; a
+   carga da lista de músculos ficou num efeito separado, sem dependências.
+
+2. `components/builder/catalog-sidebar.tsx` — a anotação "já prescrito" ficava
+   obsoleta: adicionar um exercício mudava o estado no banco, mas a lista
+   continuava exibindo o valor antigo. Agora `handleAdd` re-executa a busca. Na
+   mesma correção, falhas do `addPrescriptionItem` passaram a exibir mensagem
+   (`role="alert"`) em vez de falhar em silêncio.
+
+3. `supabase/migrations/0010_...sql` + `actions.ts` — a RPC não retornava
+   `aliases_pt`, então a sidebar perdeu a exibição dos apelidos, que existia na
+   busca por `ilike`. Regressão introduzida por mim ao trocar a fonte de dados.
+   Adicionada a coluna `out_aliases_pt` à RPC e ao mapeamento.
+
+4. `Dockerfile` — faltava `libc6-compat` nos estágios `deps` e `builder`. O
+   Alpine usa musl e os binários nativos do SWC esperam glibc; é a recomendação
+   do Dockerfile oficial do Next.js. Incluído justamente porque não consigo
+   testar o build aqui.
+
+**Correção de exagero na documentação**
+- O roadmap trazia "Deploy no EasyPanel destravado" como concluído, sem que
+  nenhum build tivesse rodado. Reescrito para "causa raiz removida", com aviso
+  explícito de que só um build verde confirma, e o item de confirmação movido
+  para "Em andamento".
+
+### Decisões técnicas
+- **Um efeito só para a busca**: manter dois exigia guarda de "primeira
+  execução", mais frágil que unificar.
+- **`out_aliases_pt` na RPC em vez de segunda query**: a informação já está na
+  linha lida; buscar de novo seria desperdício. A migration ainda não foi
+  aplicada, então alterar a 0010 continua correto — não precisou de 0011.
+- **`libc6-compat` sem poder testar**: adicionar tem custo desprezível e cobre
+  uma falha documentada do Alpine. Diante da impossibilidade de validar o build,
+  preferi a proteção recomendada pelo próprio Next.js.
+
+### Validações executadas
+
+| Comando | Resultado |
+|---|---|
+| `npx tsc --noEmit` | 0 erros |
+| `npm run lint` | 0 erros, 0 avisos |
+| `npm run build` | sucesso, 11/11 páginas |
+| `npm ci --dry-run` | lockfile em sincronia com package.json |
+| `npm test` | sem arquivos de teste (inalterado) |
+
+Verificações pontuais do Dockerfile: `public/` existe (o `COPY` é válido);
+`envServidor()` não é chamado por nenhuma página, logo o build não precisa de
+`SUPABASE_SERVICE_ROLE_KEY`; `envPublico()` é chamado pelos três clientes
+Supabase, o que confirma a necessidade dos build args.
+
+Migration revalidada do zero em **PostgreSQL 16 real** após a alteração:
+0001–0010 aplicam em sequência; `search_exercises('hip thrust')` devolve
+"Elevação pélvica" com `out_aliases_pt = {hip thrust, ponte de glúteo}`;
+reaplicação sem erro; uma única assinatura registrada em `pg_proc`.
+
+**Não verificado:** `docker build` — sem daemon Docker no ambiente. O efeito do
+`libc6-compat` é, por consequência, não comprovado aqui.
+
+### Impactos
+- **Usuário**: metade das requisições de busca do catálogo deixam de ser
+  disparadas; os apelidos voltam a aparecer, explicando por que um exercício
+  casou com a busca; a marcação de já prescrito reflete o estado real; erros ao
+  adicionar deixam de ser silenciosos.
+- **Negócio**: o arquivo que travava o deploy chegou a `main`; o próximo build
+  do EasyPanel é o teste real.
+- **Infra**: `libc6-compat` reduz risco de falha do SWC no Alpine.
+
+### Pendências
+- **Primeiro build verde no EasyPanel** — não confirmado.
+- **Migration 0010 continua não aplicada** no Supabase.
+- **Rotacionar `GROQ_API_KEY` e a chave anon** — apareceram em texto claro nos
+  logs compartilhados; segunda ocorrência.
+- Remover o fallback `ilike` após aplicar a 0010.
+- Nenhum teste automatizado existe no projeto.
+- Teto de abas por `split` não é imposto na UI.
+
+### Arquivos principais envolvidos
+- `Dockerfile`
+- `components/builder/catalog-sidebar.tsx`
+- `app/(app)/periodizacoes/[periodizationId]/actions.ts`
+- `supabase/migrations/0010_session_label_and_search.sql`
+- `docs/ROADMAP.md`, `docs/DEPLOY_EASYPANEL.md`, `docs/MIGRATIONS.md`
+
+---
+
 ## 2026-07-30 — Conecta a RPC search_exercises ao catálogo do builder
 
 ### Objetivo

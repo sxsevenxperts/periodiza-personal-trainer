@@ -48,6 +48,7 @@ export function CatalogSidebar({
   const [isPending, startTransition] = useTransition()
   const [isAdding, setIsAdding] = useState<string | null>(null)
   const [buscaSimplificada, setBuscaSimplificada] = useState(false)
+  const [erroAdicionar, setErroAdicionar] = useState<string | null>(null)
 
   const executarBusca = useCallback(
     (termo: string, muscleId: string | null) => {
@@ -63,33 +64,46 @@ export function CatalogSidebar({
     [clientId, microcycleId],
   )
 
-  // Carga inicial: lista o catalogo e os musculos para o filtro.
+  // Lista de musculos do filtro: carrega uma unica vez.
   useEffect(() => {
-    executarBusca('', null)
     startTransition(async () => {
       const { data: musclesData } = await getMuscles()
       setMuscles(musclesData || [])
     })
-  }, [executarBusca])
+  }, [])
+
+  // Busca na carga inicial e sempre que o filtro de musculo ou o contexto muda.
+  // Um unico efeito de proposito: dois efeitos disparando no mount fariam duas
+  // chamadas identicas a RPC.
+  useEffect(() => {
+    executarBusca(query, selectedMuscle)
+    // `query` fora das deps de proposito: o termo digitado so e aplicado no
+    // submit do formulario, nao a cada tecla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMuscle, executarBusca])
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     executarBusca(query, selectedMuscle)
   }
 
-  // Re-busca quando o filtro de musculo muda.
-  useEffect(() => {
-    executarBusca(query, selectedMuscle)
-    // `query` de proposito fora das deps: o termo digitado so e aplicado no
-    // submit do formulario, nao a cada tecla.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMuscle, executarBusca])
-
   const handleAdd = async (exerciseId: string) => {
     if (!activeSessionId) return
     setIsAdding(exerciseId)
-    await addPrescriptionItem(activeSessionId, exerciseId)
-    setIsAdding(null)
+    try {
+      const resultado = await addPrescriptionItem(activeSessionId, exerciseId)
+      if (resultado && 'error' in resultado && resultado.error) {
+        setErroAdicionar('Não foi possível adicionar o exercício.')
+        return
+      }
+      setErroAdicionar(null)
+      // Re-busca para atualizar a anotacao "ja prescrito", que acabou de mudar.
+      executarBusca(query, selectedMuscle)
+    } catch {
+      setErroAdicionar('Erro inesperado ao adicionar o exercício.')
+    } finally {
+      setIsAdding(null)
+    }
   }
 
   return (
@@ -127,6 +141,12 @@ export function CatalogSidebar({
           <p className="mt-2 text-[11px] text-amber-500/80">
             Busca simplificada — migration 0010 pendente (sem acento, typo ou
             anotações). Ver docs/MIGRATIONS.md.
+          </p>
+        )}
+
+        {erroAdicionar && (
+          <p role="alert" className="mt-2 text-[11px] text-red-400">
+            {erroAdicionar}
           </p>
         )}
       </div>

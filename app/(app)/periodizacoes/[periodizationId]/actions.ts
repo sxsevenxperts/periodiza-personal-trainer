@@ -171,7 +171,7 @@ function mapearResultadoBusca(linha: any) {
   return {
     id: linha.out_exercise_id as string,
     name_pt: linha.out_name_pt as string,
-    aliases_pt: null,
+    aliases_pt: (linha.out_aliases_pt ?? null) as string[] | null,
     primary_muscle_id: null,
     primary_muscle: linha.out_primary_muscle as string | null,
     movement_pattern: linha.out_movement_pattern as string | null,
