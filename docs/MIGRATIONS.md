@@ -9,6 +9,46 @@ numérica. O deploy do app **não** as executa — é um passo manual.
 |---|---|
 | 0001 – 0009 | sim (schema em uso) |
 | 0010 | **não** — pendente |
+| 0011 | **não** — pendente (RLS completo, ver abaixo) |
+
+## 0011 — RLS completo (crítica)
+
+A 0008 deixou o isolamento pela metade, de três formas:
+
+| Problema | Efeito |
+|---|---|
+| 8 tabelas **sem RLS nenhum** — incluindo `client_anamnesis` (dado de saúde) e `client_assessments` (medidas corporais) | qualquer usuário autenticado lia e escrevia dados de alunos de **outros treinadores** |
+| 4 tabelas com RLS ligado e **zero policies** (`organizations`, `profiles`, `prescription_items`, `set_logs`) | no Postgres, RLS sem policy nega tudo — o builder não enxergava **nenhum** exercício prescrito |
+| Praticamente nenhuma policy de escrita (só 1 insert) | criar aluno, prescrever, reordenar, registrar treino — tudo negado |
+
+Ou seja: onde havia RLS o app não funcionava; onde o app funcionava não havia
+isolamento. A 0011 fecha os dois lados, com policies `for all`
+(select/insert/update/delete) e `with check` em todas as tabelas de negócio.
+
+Aplicar junto com a 0010:
+
+```bash
+export SUPABASE_DB_URL="postgresql://postgres:SENHA@HOST:5432/postgres"
+npm run db:migrate                                        # 0010
+npm run db:migrate -- supabase/migrations/0011_rls_completo.sql
+```
+
+### Validação executada localmente
+
+Testada contra **PostgreSQL 16 real**, com dois treinadores e um aluno cada:
+
+| Cenário | Resultado |
+|---|---|
+| A lê os próprios alunos, anamneses, avaliações | 1 de cada ✅ |
+| A lê a anamnese sigilosa do aluno de B | vazio ✅ |
+| A insere anamnese no aluno de B | `new row violates row-level security policy` ✅ |
+| A sequestra o aluno de B (`update personal_id`) | 0 linhas ✅ |
+| A apaga o aluno de B | 0 linhas ✅ |
+| B lê periodizações / sessões / prescrições de A | 0 de cada ✅ |
+| B prescreve na sessão de A | bloqueado ✅ |
+| A cria aluno, prescreve, reordena, remove | OK ✅ |
+| A lê o catálogo compartilhado | OK ✅ |
+| reaplicar a migration | sem erro (idempotente) ✅ |
 
 > ⚠️ **Diagnóstico de 30/07 — nenhum serviço publicado no domínio do Supabase.**
 >

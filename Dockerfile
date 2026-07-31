@@ -70,9 +70,27 @@ RUN set -e; \
     fi; \
     payload=$(printf '%s' "$key" | cut -d. -f2); \
     case $((${#payload} % 4)) in 2) payload="${payload}==";; 3) payload="${payload}=";; esac; \
-    if printf '%s' "$payload" | base64 -d 2>/dev/null | grep -q 'service_role'; then \
+    decodificado=$(printf '%s' "$payload" | base64 -d 2>/dev/null || true); \
+    if printf '%s' "$decodificado" | grep -q 'service_role'; then \
       echo "ERRO: a chave informada e a service_role, que nunca pode ir ao browser."; \
       echo "      Use a chave ANON do projeto Supabase."; \
+      exit 1; \
+    fi; \
+    # As chaves de exemplo do Supabase auto-hospedado sao PUBLICAS: estao no
+    # docker-compose do repositorio oficial e sao assinadas com o JWT_SECRET
+    # padrao, tambem publico. Quem tiver o gateway alcancavel na internet
+    # consegue forjar um token service_role e ler ou apagar o banco inteiro,
+    # ignorando RLS. Elas se identificam pelo emissor "supabase-demo".
+    if printf '%s' "$decodificado" | grep -q 'supabase-demo'; then \
+      echo "ERRO: esta e a chave de EXEMPLO do Supabase (iss: supabase-demo)."; \
+      echo "      Ela e publica e vem no docker-compose oficial. Qualquer pessoa"; \
+      echo "      com acesso ao gateway consegue forjar um token service_role."; \
+      echo; \
+      echo "      Gere segredos proprios na stack do Supabase:"; \
+      echo "        1. troque JWT_SECRET por 40+ caracteres aleatorios"; \
+      echo "        2. gere ANON_KEY e SERVICE_ROLE_KEY novas com esse segredo"; \
+      echo "        3. reinicie a stack e atualize os build args aqui"; \
+      echo "      Detalhes: docs/SUPABASE_AUTO_HOSPEDADO.md"; \
       exit 1; \
     fi; \
     printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n'      "$url" >  .env.production; \

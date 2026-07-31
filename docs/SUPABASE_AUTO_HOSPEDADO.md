@@ -102,17 +102,56 @@ Se responder JSON, esse é o valor de `SUPABASE_INTERNAL_URL`.
 
 No Supabase auto-hospedado, `ANON_KEY` e `SERVICE_ROLE_KEY` são JWTs assinados
 com o `JWT_SECRET` da sua instância — estão no `.env` da stack do Supabase, não
-em nenhum painel da Supabase. Confira o papel antes de usar:
+em nenhum painel da Supabase. Confira o papel **e o emissor** antes de usar:
 
 ```bash
 # decodifica o payload sem validar assinatura
 echo "<a-chave>" | cut -d. -f2 | base64 -d 2>/dev/null; echo
-# {"role":"anon","iss":"supabase",...}     <- esta vai no app
-# {"role":"service_role", ...}             <- esta NUNCA vai no app
 ```
 
-O `Dockerfile` aborta o build se receber a `service_role`, justamente porque
-`SUPABASE_KEY` é um nome genérico e fácil de trocar sem querer.
+| Payload | Leitura |
+|---|---|
+| `{"role":"anon","iss":"supabase"}` | ✅ é esta que vai no app |
+| `{"role":"service_role", ...}` | ❌ **nunca** vai no app |
+| `{... "iss":"supabase-demo"}` | 🚨 **chave de exemplo, pública** — veja abaixo |
+
+O `Dockerfile` aborta o build nos dois últimos casos.
+
+---
+
+## 🚨 Chaves de exemplo: por que precisam ser trocadas
+
+O `docker-compose` oficial do Supabase auto-hospedado vem com `JWT_SECRET`,
+`ANON_KEY` e `SERVICE_ROLE_KEY` **de exemplo**. Elas estão publicadas no
+repositório do Supabase e na documentação — qualquer pessoa as tem.
+
+Elas se identificam pelo emissor `"iss": "supabase-demo"`.
+
+O risco não é a `ANON_KEY` vazar: é que, com o `JWT_SECRET` padrão sendo
+público, **qualquer pessoa que alcance o gateway consegue assinar um token
+`service_role` válido** e ler, alterar ou apagar o banco inteiro, ignorando
+todo o RLS. Trocar só as chaves não resolve — o segredo que as assina é que
+precisa mudar.
+
+### Como rotacionar
+
+1. **Gere um `JWT_SECRET` próprio** (40+ caracteres aleatórios):
+   ```bash
+   openssl rand -base64 48
+   ```
+2. **Gere `ANON_KEY` e `SERVICE_ROLE_KEY` novas** com esse segredo. O Supabase
+   publica um gerador na documentação de self-hosting; os payloads são:
+   ```json
+   { "role": "anon",         "iss": "supabase", "iat": <agora>, "exp": <agora+5anos> }
+   { "role": "service_role", "iss": "supabase", "iat": <agora>, "exp": <agora+5anos> }
+   ```
+3. **Troque também** `POSTGRES_PASSWORD`, `DASHBOARD_PASSWORD` e
+   `SECRET_KEY_BASE` na mesma stack — todos têm valor de exemplo público.
+4. **Reinicie a stack** do Supabase.
+5. **Atualize os build args** do app no EasyPanel e refaça o deploy.
+
+Enquanto o passo 1 não for feito, o banco deve ser tratado como **público para
+escrita**. Se já houver dado real lá, considere-o comprometido.
 
 ---
 

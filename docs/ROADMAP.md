@@ -1,5 +1,60 @@
 # Roadmap — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
+## Atualização — 2026-07-31 (RLS completo e chaves de exemplo do Supabase)
+
+Pedido de rodar contra o Supabase auto-hospedado real. Auditar as credenciais e
+o isolamento revelou dois problemas críticos de segurança.
+
+### Concluído
+- [x] **CRÍTICO — migration 0011, RLS completo.** A 0008 deixou o isolamento
+  pela metade: **8 tabelas sem RLS nenhum** (entre elas `client_anamnesis`, com
+  dado de saúde, e `client_assessments`, com medidas corporais — qualquer
+  usuário autenticado lia e escrevia dados de alunos de outros treinadores);
+  **4 tabelas com RLS ligado e zero policies** (`organizations`, `profiles`,
+  `prescription_items`, `set_logs` — no Postgres isso nega tudo, então o builder
+  não enxergava nenhum exercício prescrito); e **quase nenhuma policy de
+  escrita** (só 1 insert), o que bloqueava criar aluno, prescrever, reordenar e
+  registrar treino. Onde havia RLS o app não funcionava; onde funcionava não
+  havia isolamento. Validada contra PostgreSQL 16 com dois treinadores: leitura
+  cruzada, insert, update de sequestro e delete cruzado todos bloqueados, e o
+  fluxo do próprio treinador intacto.
+- [x] **Guarda contra as chaves de exemplo do Supabase.** O Dockerfile passou a
+  abortar o build quando a chave tem `iss: supabase-demo` — as chaves públicas
+  do docker-compose oficial. Verificado que bloqueia as duas chaves de exemplo e
+  libera uma chave própria.
+- [x] `docs/SUPABASE_AUTO_HOSPEDADO.md` ganhou a seção de rotação de segredos.
+
+### Em andamento
+- [ ] **CRÍTICO — rotacionar os segredos do Supabase.** As chaves em uso são as
+  de exemplo (`iss: supabase-demo`), assinadas com o `JWT_SECRET` padrão, que é
+  público. Enquanto não trocar, **qualquer pessoa que alcance o gateway forja um
+  token `service_role`** e ignora todo o RLS — inclusive o da 0011. Trocar só as
+  chaves não basta: o segredo que as assina é que precisa mudar.
+- [ ] **CRÍTICO** — aplicar 0010 e 0011 no Supabase.
+- [ ] **CRÍTICO** — publicar o serviço do Supabase no domínio (segue 404 catch-all).
+- [ ] Confirmar o primeiro build verde no EasyPanel.
+
+### Próximos passos
+- [ ] Rotacionar o token do GitHub e o token de API do EasyPanel, ambos
+  expostos em conversa.
+- [ ] Suíte de testes automatizados.
+- [ ] Auditar `updatePrescriptionItem`, `movePrescriptionItem` e
+  `copyPrescriptionItem` contra Postgres real.
+
+### Riscos e débitos técnicos
+- **A 0011 não protege nada enquanto o `JWT_SECRET` for o público.** RLS é
+  aplicado com base no papel do JWT; com o segredo conhecido, qualquer um emite
+  um `service_role`, que ignora RLS por definição. A rotação é pré-requisito.
+- **`exercise_substitution_log` com `workout_execution_id` nulo fica invisível**
+  para todos. A coluna é `on delete set null`, então linhas órfãs deixam de ser
+  legíveis — escolha deliberada (fail-closed), mas significa perda de trilha de
+  auditoria nesse caso.
+- A 0011 usa funções `security definer` para quebrar a recursão das policies.
+  Elas têm `search_path` fixo, mas qualquer alteração futura nelas precisa
+  manter esse cuidado.
+- `organizations` e `organization_members` receberam policies apenas de leitura;
+  criação de organização ainda depende de service_role ou de fluxo não definido.
+
 ## Atualização — 2026-07-31 (Supabase auto-hospedado: duas armadilhas de login)
 
 Contexto novo: o Supabase é **auto-hospedado no mesmo servidor**, não o

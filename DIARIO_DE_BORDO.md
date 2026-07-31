@@ -1,5 +1,136 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-31 — RLS completo e as chaves de exemplo do Supabase
+
+### Objetivo
+Pedido: usar o Supabase auto-hospedado real do servidor, com as credenciais
+fornecidas, e garantir isolamento por usuário ("cada usuário dos tipos de
+acessos tem bancos de dados isolados").
+
+Auditar as duas coisas — as credenciais e o isolamento — revelou dois problemas
+críticos. Nenhum dos dois estava no radar antes.
+
+### Alterações realizadas
+
+#### 1. As chaves fornecidas são as de exemplo, públicas
+
+Decodifiquei os dois JWTs:
+
+```
+ANON:          { role: 'anon',         iss: 'supabase-demo', ... }
+SERVICE_ROLE:  { role: 'service_role', iss: 'supabase-demo', ... }
+```
+
+O emissor `supabase-demo` é a assinatura das chaves de exemplo do
+`docker-compose` oficial. Confirmei recalculando o HMAC com o `JWT_SECRET`
+padrão público (`your-super-secret-jwt-token-with-at-least-32-characters-long`):
+a assinatura **bate exatamente**.
+
+Consequência: não é a `ANON_KEY` que está exposta — é que, com o `JWT_SECRET`
+sendo público, qualquer pessoa que alcance o gateway **assina um token
+`service_role` válido** e lê, altera ou apaga o banco inteiro, ignorando RLS.
+Trocar as chaves não resolve; o segredo que as assina é que precisa mudar.
+
+Adicionei guarda no `Dockerfile`: o build aborta se a chave tiver
+`iss: supabase-demo`, com as instruções de rotação. Verificado que bloqueia as
+duas chaves de exemplo e libera uma chave própria (`iss: supabase`).
+
+#### 2. O RLS estava pela metade — migration 0011
+
+Auditando o isolamento pedido, encontrei três falhas na 0008:
+
+| Problema | Efeito |
+|---|---|
+| **8 tabelas sem RLS nenhum** — `client_anamnesis`, `client_assessments`, `client_equipment_access`, `mesocycles`, `microcycles`, `session_blocks`, `prescription_set_targets`, `exercise_substitution_log` | qualquer autenticado lia e escrevia dado de saúde e medidas corporais de alunos de **outros treinadores** |
+| **4 tabelas com RLS ligado e zero policies** — `organizations`, `profiles`, `prescription_items`, `set_logs` | no Postgres, RLS sem policy nega tudo: o builder não enxergava **nenhum** exercício prescrito |
+| **Quase nenhuma policy de escrita** (1 insert no total) | criar aluno, prescrever, reordenar, registrar treino — tudo negado |
+
+Resumo: onde havia RLS o app não funcionava; onde o app funcionava não havia
+isolamento. As duas metades do pedido falhavam ao mesmo tempo.
+
+A 0011 fecha os dois lados: RLS em todas as tabelas de negócio, policies
+`for all` com `using` **e** `with check`, e leitura pública só no catálogo
+compartilhado (vocabulário, não dado de cliente).
+
+### Decisões técnicas
+
+**Funções `security definer` para quebrar recursão.** As policies de `clients`
+precisam consultar `clients`; sem isso a avaliação entra em recursão infinita.
+As quatro auxiliares (`pode_acessar_cliente`, `..._periodizacao`, `..._sessao`,
+`..._execucao`) resolvem a cadeia uma vez. Todas com `search_path` fixo —
+obrigatório em `security definer`, senão um schema no caminho sequestra os
+nomes das tabelas.
+
+**`with check` além de `using`.** Só `using` filtraria a leitura e deixaria
+inserir linha de outro dono. Testei exatamente esse caso.
+
+**Escrita em `clients` só por `personal_id`.** O aluno lê os próprios dados
+(`using` cobre `profile_id`), mas não cria nem transfere cadastro.
+
+**Build bloqueia a chave de exemplo em vez de só avisar.** Um aviso seria
+ignorado, e o custo de subir com o banco aberto à internet é maior que o de um
+build falhando com instruções.
+
+### Validações executadas
+
+RLS testado contra **PostgreSQL 16 real**, schema reconstruído das migrations,
+com dois treinadores e um aluno cada:
+
+| Cenário | Esperado | Obtido |
+|---|---|---|
+| A lê próprios alunos / anamneses / avaliações | 1 de cada | `1` / `1` / `1` |
+| A lê anamnese sigilosa do aluno de B | vazio | vazio |
+| B lê anamnese sigilosa do aluno de A | vazio | vazio |
+| A insere anamnese no aluno de B | bloqueado | `new row violates row-level security policy` |
+| A sequestra o aluno de B (`update personal_id`) | 0 linhas | `0` |
+| A apaga o aluno de B | 0 linhas | `0` |
+| B lê periodizações / sessões / prescrições de A | 0 | `0` / `0` / `0` |
+| B prescreve na sessão de A | bloqueado | erro de RLS |
+| A cria aluno, prescreve, reordena, remove | OK | `OK` nos quatro |
+| A lê catálogo compartilhado | OK | `1` |
+| reaplicar a 0011 | sem erro | `exit=0` |
+
+Guarda do Dockerfile testada em `/bin/sh`: anon de exemplo → bloqueia; service
+role de exemplo → bloqueia; anon própria → passa.
+
+`npx tsc --noEmit` e `npm run lint` limpos.
+
+**Erro meu no processo, registrado:** na primeira aplicação da 0011 eu li
+`exit=$?` depois de um pipe para `head`, então capturei o código do `head` e não
+o do `psql`. Concluí que tinha aplicado quando havia falhado no meio — só
+percebi porque o teste de isolamento mostrou `sessions` com RLS e zero policies.
+A verificação seguinte foi feita sem pipe.
+
+### Impactos
+
+- **Usuário**: dado de saúde e avaliação física de aluno deixa de ser legível
+  por outros treinadores. O builder passa a funcionar sob RLS.
+- **Negócio**: sem a 0011, o produto violaria a expectativa mínima de
+  confidencialidade entre clientes de uma mesma instalação.
+- **Infraestrutura**: enquanto o `JWT_SECRET` não for rotacionado, a 0011 não
+  protege nada — `service_role` ignora RLS por definição.
+
+### Pendências
+
+- **A rotação de segredos do Supabase é pré-requisito** para qualquer coisa
+  aqui ter efeito. Está fora do que consigo executar: o painel do EasyPanel
+  (`164.68.116.21:3000`) não é alcançável a partir deste ambiente.
+- Não configurei nada no servidor. Nenhuma credencial foi commitada.
+- Token do GitHub e token de API do EasyPanel foram expostos em conversa e
+  precisam ser rotacionados.
+- 0010 e 0011 continuam pendentes de aplicação no banco.
+- O domínio do Supabase segue devolvendo 404 catch-all — nenhum serviço
+  vinculado.
+- `docker build` não executado (sem daemon Docker no ambiente).
+
+### Arquivos principais envolvidos
+- `supabase/migrations/0011_rls_completo.sql`
+- `Dockerfile`
+- `docs/SUPABASE_AUTO_HOSPEDADO.md`
+- `docs/MIGRATIONS.md`
+
+---
+
 ## 2026-07-31 — Supabase auto-hospedado: duas armadilhas que quebram o login em silêncio
 
 ### Objetivo
