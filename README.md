@@ -140,6 +140,22 @@ comprimento e o papel declarado no JWT.
 
 Configuração no EasyPanel e diagnóstico de falhas: `docs/DEPLOY_EASYPANEL.md`.
 
+### Supabase auto-hospedado
+
+Se o Supabase roda no seu próprio servidor, defina também `SUPABASE_INTERNAL_URL`
+(runtime) apontando para o gateway Kong na rede interna:
+
+```
+SUPABASE_INTERNAL_URL=http://supabase-kong:8000
+```
+
+O código de servidor passa a falar com o Supabase pela rede interna e o browser
+segue no domínio público. O nome do cookie de sessão é fixo (`lib/env.ts`), o que
+é pré-requisito para esse split — por padrão o `@supabase/ssr` deriva o nome do
+hostname, e os dois lados procurariam cookies diferentes.
+
+Armadilhas do auto-hospedado e como conferir: `docs/SUPABASE_AUTO_HOSPEDADO.md`.
+
 ---
 
 ## Estrutura de pastas

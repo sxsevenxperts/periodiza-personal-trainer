@@ -9,10 +9,35 @@ import { z } from 'zod'
  * browser — por isso o objeto e montado campo a campo.
  */
 
+/**
+ * Nome fixo do cookie de sessao.
+ *
+ * Por padrao o `@supabase/supabase-js` deriva esse nome do hostname:
+ *
+ *     const defaultStorageKey = `sb-${baseUrl.hostname.split('.')[0]}-auth-token`
+ *
+ * Num Supabase gerenciado isso da o "project ref" e e estavel. Num Supabase
+ * **auto-hospedado** e uma armadilha, por dois motivos:
+ *
+ * 1. O nome passa a depender do dominio. Trocar o dominio do Supabase — ou
+ *    passar a acessa-lo por IP — muda o nome do cookie e desloga todo mundo,
+ *    sem nenhum erro visivel.
+ * 2. Se o servidor falar com o Supabase pela rede interna do Docker
+ *    (`http://supabase-kong:8000`) e o browser pelo dominio publico, os dois
+ *    lados calculam nomes DIFERENTES (`sb-supabase-kong-auth-token` vs
+ *    `sb-meu-supabase-auth-token`). O servidor nunca encontra o cookie que o
+ *    browser gravou: o login "funciona" e a proxima navegacao volta para a tela
+ *    de login, em loop.
+ *
+ * Fixar o nome elimina os dois problemas e e pre-requisito para o split de URL
+ * publica/interna descrito em `urlSupabaseServidor()`.
+ */
+export const NOME_COOKIE_SESSAO = 'sb-periodiza-auth-token'
+
 const esquemaPublico = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z
     .string()
-    .url('NEXT_PUBLIC_SUPABASE_URL precisa ser uma URL valida.'),
+    .url('NEXT_PUBLIC_SUPABASE_URL precisa ser uma URL valida, com https:// ou http://.'),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z
     .string()
     .min(1, 'NEXT_PUBLIC_SUPABASE_ANON_KEY nao pode ficar vazia.'),
@@ -46,6 +71,45 @@ export function envPublico(): EnvPublico {
   }
 
   return resultado.data
+}
+
+/**
+ * URL do Supabase que o **servidor** deve usar.
+ *
+ * `SUPABASE_INTERNAL_URL` e opcional e existe para Supabase auto-hospedado no
+ * mesmo host que a aplicacao. Quando definida, o codigo de servidor fala com o
+ * gateway pela rede interna do Docker (`http://supabase-kong:8000`), enquanto o
+ * browser continua usando `NEXT_PUBLIC_SUPABASE_URL`. Ganhos concretos:
+ *
+ *   - o servidor nao depende de DNS publico nem do proxy reverso para
+ *     funcionar — o app sobe mesmo antes de o dominio publico estar pronto;
+ *   - certificado autoassinado no dominio publico deixa de derrubar as chamadas
+ *     de servidor, porque elas nem passam por TLS;
+ *   - uma volta a menos pela internet em toda renderizacao.
+ *
+ * Diferente das `NEXT_PUBLIC_*`, esta variavel e lida em **runtime** — pode ser
+ * ajustada no painel sem rebuildar a imagem. Se estiver ausente ou invalida,
+ * cai na URL publica, que e o comportamento de sempre.
+ *
+ * O split so e seguro porque `NOME_COOKIE_SESSAO` fixa o nome do cookie; sem
+ * isso os dois lados procurariam cookies com nomes diferentes.
+ */
+export function urlSupabaseServidor(): string {
+  const publica = envPublico().NEXT_PUBLIC_SUPABASE_URL
+  const interna = process.env.SUPABASE_INTERNAL_URL
+
+  if (!interna) return publica
+
+  try {
+    new URL(interna)
+    return interna
+  } catch {
+    console.error(
+      `SUPABASE_INTERNAL_URL invalida (${interna}). Confira se o esquema ` +
+        '(http:// ou https://) esta presente. Usando NEXT_PUBLIC_SUPABASE_URL.',
+    )
+    return publica
+  }
 }
 
 /** Segredos que so podem ser lidos no servidor (scripts e rotinas admin). */

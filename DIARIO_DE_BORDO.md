@@ -1,5 +1,134 @@
 # Diário de Bordo - Periodiza
 
+## 2026-07-31 — Supabase auto-hospedado: duas armadilhas que quebram o login em silêncio
+
+### Objetivo
+Pedido: "revise profundamente e corrija profundamente pra que entre no EasyPanel
+no meu servidor e Supabase auto-hospedado".
+
+O detalhe novo é decisivo: **auto-hospedado**, não gerenciado. Fui atrás das
+diferenças que quebram um app Next.js nesse cenário, e as duas que encontrei
+falham sem produzir erro — o pior tipo.
+
+### Alterações realizadas
+
+#### 1. O nome do cookie de sessão era derivado do hostname (crítico)
+
+Lendo `node_modules/@supabase/supabase-js/src/SupabaseClient.ts:327`:
+
+```js
+const defaultStorageKey = `sb-${baseUrl.hostname.split('.')[0]}-auth-token`
+```
+
+No Supabase gerenciado isso dá o *project ref* e nunca muda. No auto-hospedado
+vira uma função do domínio. Para a **mesma instância**:
+
+| URL | Cookie procurado |
+|---|---|
+| `https://xpert-backend-supabase.qfotry.easypanel.host` | `sb-xpert-backend-supabase-auth-token` |
+| `http://supabase-kong:8000` | `sb-supabase-kong-auth-token` |
+| `http://164.68.116.21:8000` | `sb-164-auth-token` |
+
+Dois efeitos, ambos silenciosos:
+
+- trocar o domínio do Supabase **desloga todo mundo**, sem nada no log;
+- se servidor e browser usarem URLs diferentes, cada lado procura um cookie
+  diferente: o login "funciona" e a navegação seguinte volta para o login, em
+  loop.
+
+Fixei o nome em `lib/env.ts` (`NOME_COOKIE_SESSAO = 'sb-periodiza-auth-token'`) e
+passei `cookieOptions: { name }` nos três clientes — browser, servidor e
+middleware.
+
+#### 2. Servidor e browser não alcançam o Supabase pelo mesmo caminho
+
+O container do app roda ao lado do Supabase, na mesma rede Docker; o browser
+está na internet. Forçar os dois pelo domínio público faz o servidor sair para a
+internet e voltar pelo proxy só para falar com o vizinho de porta — dependendo
+de DNS público e TLS válido para isso.
+
+Adicionei `SUPABASE_INTERNAL_URL` (opcional, runtime): quando definida, o código
+de servidor usa a rede interna e o browser segue no domínio público. Isso só é
+seguro por causa da correção anterior — sem o cookie fixo, o split **causaria**
+o loop de login descrito acima.
+
+#### 3. A sonda passou a distinguir os dois caminhos
+
+`/api/health?deep=1` agora testa público e interno separadamente, marcando
+`usadoPor: browser` e `usadoPor: servidor`. O caso "interno OK, público
+quebrado" é comum no auto-hospedado e significa algo específico: o app
+renderiza, mas o browser não fala com o Supabase. Antes era indistinguível de
+falha total.
+
+### Decisões técnicas
+
+**`SUPABASE_INTERNAL_URL` opcional, não obrigatória.** Torná-la obrigatória
+quebraria quem usa Supabase gerenciado. Ausente, tudo cai na URL pública — o
+comportamento de sempre.
+
+**Runtime, não build arg.** `NEXT_PUBLIC_*` é resolvida no build e embutida no
+bundle; mudá-la exige rebuild. A interna é lida em runtime de propósito: o
+hostname do container é o valor com maior chance de estar errado na primeira
+tentativa, e corrigi-lo não deve custar um rebuild.
+
+**Nome de cookie fixo em vez de derivado da URL pública.** Derivar da pública
+resolveria o split, mas manteria a fragilidade de trocar o domínio. Um nome
+fixo elimina as duas.
+
+**Certificado autoassinado: documentado, não contornado.** Registrei
+`SUPABASE_INTERNAL_URL` como solução preferida e `NODE_EXTRA_CA_CERTS` como
+alternativa, e explicitei por que `NODE_TLS_REJECT_UNAUTHORIZED=0` não entra —
+desliga a verificação de todas as conexões TLS do processo.
+
+### Validações executadas
+
+Testei ponta a ponta com um **Supabase falso alcançável somente pelo caminho
+interno**, e a URL pública apontada de propósito para um host inexistente
+(`publico-inalcancavel.invalid`): se o servidor a tivesse usado, nada
+responderia.
+
+| Cenário | Esperado | Obtido |
+|---|---|---|
+| `/dashboard` com cookie `sb-periodiza-auth-token` | 200, sessão válida | `200` |
+| `/dashboard` com cookie de nome derivado do host | 307 para `/login` | `307` |
+| requisições recebidas pelo Supabase interno | validação + queries reais | `GET /auth/v1/user`, `HEAD /rest/v1/clients?select=id&status=eq.ativo`, `HEAD /rest/v1/periodizations?select=id&status=eq.ativa` |
+| `?deep=1`, público quebrado e interno OK | 200, distinguindo os dois | `status: ok`, `publico.ok: false`, `interno.ok: true` |
+| `SUPABASE_INTERNAL_URL` no bundle do browser | não deve vazar | não vazou |
+| `npx tsc --noEmit` / `npm run lint` | limpos | 0 erros / 0 avisos |
+| `npm run build` | verde | 11/11 páginas |
+
+O terceiro item é o mais forte: prova que o servidor validou a sessão e rodou as
+queries do dashboard **inteiramente pela rede interna**.
+
+### Impactos
+
+- **Usuário**: o login deixa de estar sujeito a um loop invisível e sobrevive a
+  mudança de domínio do Supabase.
+- **Infraestrutura**: o app sobe mesmo com o domínio público do Supabase ainda
+  não publicado — que é exatamente a situação atual deste servidor. Deixa de ser
+  bloqueio para o app subir.
+- **Arquitetura**: passa a existir uma separação explícita entre o caminho do
+  browser e o do servidor, antes implicitamente iguais.
+
+### Pendências
+
+- O domínio público do Supabase **continua sem serviço vinculado**. Com o split,
+  isso deixa de impedir o app de subir, mas o browser ainda precisa dele — sem
+  domínio público funcionando, o login pelo navegador não completa.
+- Migration 0010 segue pendente.
+- Testado contra um Supabase **falso**, não contra a instância real — o formato
+  das respostas foi replicado, mas só o servidor real confirma.
+- `docker build` segue não executado (sem daemon no ambiente).
+
+### Arquivos principais envolvidos
+- `lib/env.ts`
+- `lib/supabase/client.ts`, `lib/supabase/server.ts`, `lib/supabase/middleware.ts`
+- `app/api/health/route.ts`
+- `docs/SUPABASE_AUTO_HOSPEDADO.md`
+- `.env.example`, `README.md`, `docs/DEPLOY_EASYPANEL.md`
+
+---
+
 ## 2026-07-30 — Revisão da revisão: bugs provados contra Postgres real
 
 ### Objetivo

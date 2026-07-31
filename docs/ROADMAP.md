@@ -1,5 +1,57 @@
 # Roadmap — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
+## Atualização — 2026-07-31 (Supabase auto-hospedado: duas armadilhas de login)
+
+Contexto novo: o Supabase é **auto-hospedado no mesmo servidor**, não o
+gerenciado. Isso muda a arquitetura e expôs dois defeitos que teriam quebrado o
+login em produção sem produzir erro visível.
+
+### Concluído
+- [x] **CRÍTICO — nome do cookie de sessão fixado.** O `@supabase/supabase-js`
+  deriva o nome do hostname: `sb-${hostname.split('.')[0]}-auth-token`. No
+  gerenciado isso é o *project ref*, estável. No auto-hospedado vira função do
+  domínio: `sb-meu-supabase-auth-token`, `sb-supabase-kong-auth-token`,
+  `sb-164-auth-token` para a mesma instância. Efeitos: trocar o domínio do
+  Supabase desloga todo mundo silenciosamente, e servidor/browser em URLs
+  diferentes procuram cookies diferentes — login em loop. Fixado como
+  `sb-periodiza-auth-token` em `lib/env.ts`, aplicado nos três clientes.
+- [x] **`SUPABASE_INTERNAL_URL` — split de URL pública/interna.** O servidor
+  fala com o Kong pela rede interna do Docker; o browser segue no domínio
+  público. O app passa a subir mesmo antes de o domínio público existir, e
+  certificado autoassinado deixa de derrubar o servidor (as chamadas internas
+  não passam por TLS). Lida em runtime, então muda sem rebuild. Opcional: sem
+  ela, tudo usa a URL pública, como antes.
+- [x] **Sonda `/api/health?deep=1` passou a testar os dois caminhos**
+  separadamente, com `usadoPor: browser` / `usadoPor: servidor`. O caso
+  "interno OK, público quebrado" é comum no auto-hospedado e significa que o app
+  renderiza mas o browser não fala com o Supabase — antes isso era indistinguível
+  de uma falha total.
+- [x] `docs/SUPABASE_AUTO_HOSPEDADO.md` — como identificar o Kong entre os
+  containers da stack, descobrir o hostname interno, conferir o papel do JWT,
+  e o que fazer com certificado autoassinado (incluindo por que
+  `NODE_TLS_REJECT_UNAUTHORIZED=0` não é opção).
+
+### Em andamento
+- [ ] Confirmar o primeiro build verde no EasyPanel.
+- [ ] **CRÍTICO** — publicar o serviço do Supabase no domínio (segue sem nada
+  vinculado). Com `SUPABASE_INTERNAL_URL` isso deixa de bloquear o app subir,
+  mas o browser continua precisando do domínio público.
+- [ ] **CRÍTICO** — aplicar a migration 0010.
+
+### Próximos passos
+- [ ] Suíte de testes automatizados.
+- [ ] Auditar `updatePrescriptionItem`, `movePrescriptionItem` e
+  `copyPrescriptionItem` contra Postgres real.
+- [ ] Remover os `eslint-disable` de arquivo inteiro no arquivo de actions.
+
+### Riscos e débitos técnicos
+- **Sessões anteriores ficam órfãs** ao mudar o nome do cookie. Como o app nunca
+  chegou a subir em produção, o impacto real é nulo — mas exige um novo login
+  em qualquer ambiente onde já se tenha logado.
+- `NEXT_PUBLIC_SUPABASE_URL` continua embutida no bundle no build: mudar o
+  domínio público exige rebuild. Só `SUPABASE_INTERNAL_URL` é ajustável a quente.
+- `docker build` segue não executado — sem daemon Docker no ambiente.
+
 ## Atualização — 2026-07-30 (revisão da revisão: bugs provados contra Postgres real)
 
 Revisão pedida sobre o trabalho anterior. Encontrou defeitos que as entradas

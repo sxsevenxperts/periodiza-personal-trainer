@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+import { NOME_COOKIE_SESSAO } from '@/lib/env'
+
 /**
  * Sonda de saude do container.
  *
@@ -119,15 +121,23 @@ export async function GET(request: Request) {
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const chave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Lida em runtime (nao e NEXT_PUBLIC_*), entao reflete o que o painel tem
+  // agora, sem depender de rebuild.
+  const urlInterna = process.env.SUPABASE_INTERNAL_URL
 
   const { host, erro: erroDeUrl } = url ? hostDaUrl(url) : { host: null }
+  const { host: hostInterno } = urlInterna ? hostDaUrl(urlInterna) : { host: null }
 
   const configuracao = {
     NEXT_PUBLIC_SUPABASE_URL: host ?? (url ? { invalida: erroDeUrl } : null),
+    SUPABASE_INTERNAL_URL: urlInterna
+      ? (hostInterno ?? { invalida: 'URL invalida' })
+      : null,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: chave
       ? { comprimento: chave.length, papel: papelDoJwt(chave) }
       : null,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'definida' : null,
+    cookieDeSessao: NOME_COOKIE_SESSAO,
   }
 
   const faltando = [
@@ -165,10 +175,33 @@ export async function GET(request: Request) {
     )
   }
 
-  const supabase = await sondarSupabase(url, chave)
+  // Os dois caminhos sao sondados separadamente porque falham por motivos
+  // diferentes, e num Supabase auto-hospedado o que importa para o servidor e o
+  // caminho interno. E comum o publico estar quebrado (proxy, DNS, certificado)
+  // com o interno perfeito — nesse caso o app funciona e so o browser sofre.
+  const [publico, interno] = await Promise.all([
+    sondarSupabase(url, chave),
+    urlInterna && hostInterno
+      ? sondarSupabase(urlInterna, chave)
+      : Promise.resolve(null),
+  ])
+
+  // O servidor usa o interno quando ele existe; e ele que decide se o app
+  // consegue renderizar.
+  const caminhoDoServidor = interno ?? publico
 
   return NextResponse.json(
-    { ...base, status: supabase.ok ? 'ok' : 'supabase_inacessivel', supabase },
-    { status: supabase.ok ? 200 : 503 },
+    {
+      ...base,
+      status: caminhoDoServidor.ok ? 'ok' : 'supabase_inacessivel',
+      supabase: caminhoDoServidor,
+      caminhos: {
+        publico: { ...publico, usadoPor: 'browser' },
+        interno: interno
+          ? { ...interno, usadoPor: 'servidor' }
+          : { configurado: false, nota: 'SUPABASE_INTERNAL_URL nao definida; o servidor usa a URL publica.' },
+      },
+    },
+    { status: caminhoDoServidor.ok ? 200 : 503 },
   )
 }

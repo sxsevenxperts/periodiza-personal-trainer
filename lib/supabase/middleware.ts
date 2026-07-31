@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { envPublico } from '@/lib/env'
+import { envPublico, urlSupabaseServidor, NOME_COOKIE_SESSAO } from '@/lib/env'
 import type { Database } from '@/lib/types/database'
 
 /** Prefixos que exigem sessao ativa — espelham o grupo de rotas `(app)`. */
@@ -42,12 +42,13 @@ function ehRotaDeAuth(pathname: string): boolean {
 export async function atualizarSessao(request: NextRequest): Promise<NextResponse> {
   let supabaseResponse = NextResponse.next({ request })
 
-  const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } = envPublico()
+  const { NEXT_PUBLIC_SUPABASE_ANON_KEY } = envPublico()
 
   const supabase = createServerClient<Database>(
-    NEXT_PUBLIC_SUPABASE_URL,
+    urlSupabaseServidor(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      cookieOptions: { name: NOME_COOKIE_SESSAO },
       cookies: {
         getAll() {
           return request.cookies.getAll()

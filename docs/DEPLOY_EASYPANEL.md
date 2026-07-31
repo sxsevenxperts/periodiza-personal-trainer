@@ -90,11 +90,17 @@ propósito.
 
 ### 2. Variáveis de runtime
 
-As duas acima também, mais (se o container rodar scripts admin):
+As duas acima também, mais:
 
-| Nome | Valor |
-|---|---|
-| `SUPABASE_SERVICE_ROLE_KEY` | chave service role — **nunca** como build arg de bundle cliente |
+| Nome | Valor | Quando |
+|---|---|---|
+| `SUPABASE_INTERNAL_URL` | `http://supabase-kong:8000` | Supabase auto-hospedado no mesmo servidor — **recomendada** |
+| `SUPABASE_SERVICE_ROLE_KEY` | chave service role | só se o container rodar scripts admin. **Nunca** como build arg |
+
+`SUPABASE_INTERNAL_URL` faz o código de servidor falar com o Supabase pela rede
+interna do Docker, enquanto o browser segue no domínio público. Com isso o app
+sobe mesmo antes de o domínio público existir, e certificado autoassinado deixa
+de derrubar o servidor. Guia completo: `docs/SUPABASE_AUTO_HOSPEDADO.md`.
 
 ### 3. Porta
 

@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 
-import { envPublico } from '@/lib/env'
+import { envPublico, urlSupabaseServidor, NOME_COOKIE_SESSAO } from '@/lib/env'
 import type { Database } from '@/lib/types/database'
 
 /**
@@ -15,13 +15,16 @@ import type { Database } from '@/lib/types/database'
  * da requisicao atual.
  */
 export async function criarClienteServidor() {
-  const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } = envPublico()
+  const { NEXT_PUBLIC_SUPABASE_ANON_KEY } = envPublico()
   const cookieStore = await cookies()
 
   return createServerClient<Database>(
-    NEXT_PUBLIC_SUPABASE_URL,
+    // Rede interna quando SUPABASE_INTERNAL_URL existir; caso contrario, a URL
+    // publica. O nome do cookie e fixo, entao a sessao vale nos dois casos.
+    urlSupabaseServidor(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      cookieOptions: { name: NOME_COOKIE_SESSAO },
       cookies: {
         getAll() {
           return cookieStore.getAll()
