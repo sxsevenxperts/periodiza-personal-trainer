@@ -2,7 +2,7 @@
 
 import { createBrowserClient } from '@supabase/ssr'
 
-import { envPublico, NOME_COOKIE_SESSAO } from '@/lib/env'
+import { envPublico, NOME_COOKIE_SESSAO, SCHEMA_DO_PROJETO } from '@/lib/env'
 import type { Database } from '@/lib/types/database'
 
 /**
@@ -20,6 +20,9 @@ export function criarClienteBrowser() {
   return createBrowserClient<Database>(
     NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    { cookieOptions: { name: NOME_COOKIE_SESSAO } },
+    {
+      cookieOptions: { name: NOME_COOKIE_SESSAO },
+      db: { schema: SCHEMA_DO_PROJETO },
+    },
   )
 }

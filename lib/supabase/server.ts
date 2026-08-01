@@ -1,7 +1,12 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 
-import { envPublico, urlSupabaseServidor, NOME_COOKIE_SESSAO } from '@/lib/env'
+import {
+  envPublico,
+  urlSupabaseServidor,
+  NOME_COOKIE_SESSAO,
+  SCHEMA_DO_PROJETO,
+} from '@/lib/env'
 import type { Database } from '@/lib/types/database'
 
 /**
@@ -25,6 +30,7 @@ export async function criarClienteServidor() {
     NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookieOptions: { name: NOME_COOKIE_SESSAO },
+      db: { schema: SCHEMA_DO_PROJETO },
       cookies: {
         getAll() {
           return cookieStore.getAll()

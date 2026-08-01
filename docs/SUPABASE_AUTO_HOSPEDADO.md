@@ -1,5 +1,50 @@
 # Supabase auto-hospedado no mesmo servidor
 
+## Regra geral desta instalação: um Supabase, vários projetos
+
+Esta instância hospeda **mais de um projeto**. O isolamento acontece em duas
+camadas, e as duas são necessárias:
+
+| Camada | Separa | Como | Onde |
+|---|---|---|---|
+| 1 | **projetos** entre si | schema dedicado por projeto | migration `0012` |
+| 2 | **usuários** dentro do projeto | RLS por treinador/aluno | migration `0011` |
+
+Sem a camada 1, dois projetos colidem no `public` — `clients`, `sessions`,
+`profiles` e `equipment` são nomes que qualquer sistema usa. O segundo projeto a
+rodar suas migrations ou falharia, ou passaria a **escrever nas tabelas do
+primeiro**.
+
+Sem a camada 2, todos os treinadores **dentro** deste projeto enxergariam os
+alunos uns dos outros.
+
+Este projeto ocupa o schema **`periodiza`**. Um projeto novo nesta mesma
+instância deve escolher outro nome e nunca usar o `public`.
+
+### O que precisa estar configurado
+
+| Onde | Valor |
+|---|---|
+| Stack do Supabase | `PGRST_DB_SCHEMAS=public,storage,graphql_public,periodiza` |
+| App (build arg, opcional) | `NEXT_PUBLIC_SUPABASE_SCHEMA=periodiza` (é o padrão) |
+
+O PostgREST **só expõe schemas listados em `PGRST_DB_SCHEMAS`**. Sem incluir o
+schema ali e reiniciar o serviço `rest`, a API responde 404 em tudo — mesmo com
+as tabelas existindo e o RLS correto.
+
+### Ordem de aplicação das migrations
+
+```
+0001 … 0010  →  0011 (RLS)  →  0012 (schema)
+```
+
+A ordem importa: a 0011 escreve policies em `public.*`. Rodá-la **depois** da
+0012 falha com `relation "public.clients" does not exist` — falha limpa, sem
+efeito colateral (verificado: sai com código 3 e as 24 tabelas em `periodiza`
+mantêm RLS e policies intactos), mas é retrabalho.
+
+---
+
 Guia para rodar o app no EasyPanel contra um Supabase que **você hospeda**, e não
 o Supabase gerenciado. As diferenças não são cosméticas — duas delas quebram o
 login de formas que não produzem erro visível.

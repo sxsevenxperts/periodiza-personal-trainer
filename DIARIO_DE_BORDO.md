@@ -1,5 +1,126 @@
 # Diário de Bordo - Periodiza
 
+## 2026-08-01 — Regra geral: um Supabase, vários projetos, schemas isolados
+
+### Objetivo
+Regra de arquitetura estabelecida pelo pedido: uma única instância do Supabase
+hospeda vários projetos; cada projeto tem seus bancos e funções separados, e
+cada tipo de acesso tem usuários e dados isolados.
+
+Isso é uma camada **acima** do RLS entregue na 0011. Faltava a de baixo.
+
+### Alterações realizadas
+
+#### Migration 0012 — schema dedicado
+
+Todo o projeto vivia no `public`. Numa instância compartilhada isso é colisão
+garantida: `clients`, `sessions`, `profiles` e `equipment` são nomes que
+qualquer sistema usa. O segundo projeto a rodar migrations ou falharia, ou —
+pior — passaria a escrever nas tabelas do primeiro.
+
+A 0012 move tabelas, views, enums e funções para o schema `periodiza`. O
+`alter ... set schema` leva junto índices, constraints, triggers, RLS e
+policies, então nada disso precisou ser recriado.
+
+O isolamento ficou assim:
+
+| Camada | Separa | Mecanismo |
+|---|---|---|
+| 1 | projetos entre si | schema dedicado (0012) |
+| 2 | usuários dentro do projeto | RLS (0011) |
+
+#### Bug encontrado dentro da própria 0012
+
+Mover a função não conserta o que ela faz por dentro. Depois do primeiro teste:
+
+```
+ERROR:  relation "public.profiles" does not exist
+CONTEXT: SQL statement "insert into periodiza.profiles ..."
+```
+
+Disparado pelo trigger `on_auth_user_created` ao inserir em `auth.users`.
+Investigando, dois problemas distintos:
+
+- **5 funções com `public.` no corpo** — `handle_new_user`, `current_org_id`,
+  `is_staff`, `is_org_owner`, `is_org_member`;
+- **7 funções com `search_path = pg_catalog, public, pg_temp`**, fazendo nomes
+  sem qualificação procurarem no schema errado.
+
+O segundo é o mais perigoso dos dois: com outro projeto ainda no `public`, uma
+função deste projeto poderia silenciosamente ler ou escrever na tabela homônima
+do vizinho — exatamente o que a migration existe para impedir.
+
+A 0012 passou a reescrever corpo e `search_path` das funções movidas.
+
+### Decisões técnicas
+
+**Schema por projeto, não banco por projeto.** Bancos separados isolariam mais,
+mas o Supabase (PostgREST, GoTrue, Storage) é montado sobre um banco só;
+múltiplos bancos exigiriam uma stack inteira por projeto. Schema é o corte que a
+plataforma suporta.
+
+**Lista explícita de tabelas na 0012.** Mover "tudo que estiver no public"
+arrastaria tabelas de outro projeto que divida a instância. A migration só move
+o que está na lista.
+
+**Reescrita das funções via `pg_get_functiondef` + replace.** Alternativa seria
+reescrever as 14 funções à mão, duplicando código das migrations anteriores. O
+replace tem o risco de atingir a string `public.` dentro de literal de texto —
+nenhuma função deste projeto tem isso, e ficou registrado como ressalva na
+própria migration.
+
+### Validações executadas
+
+Base reconstruída do zero a partir das migrations, contra PostgreSQL 16:
+
+| Cenário | Esperado | Obtido |
+|---|---|---|
+| tabelas movidas para `periodiza` | 24 | `24` |
+| `public` vazio depois da 0012 | vazio | `(vazio)` |
+| policies acompanharam a mudança | 24 | `24` |
+| tabelas com RLS em `periodiza` | 24 | `24` |
+| funções ainda apontando para `public` | nenhuma | `(nenhuma)` |
+| trigger `on_auth_user_created` | funciona | grava em `periodiza.profiles` |
+| **camada 1** — `outro_app.clients` coexiste | sem colisão | criado, `periodiza.clients` intacto |
+| **camada 2** — A lê anamnese de B | vazio | vazio |
+| **camada 2** — B lê anamnese de A | vazio | vazio |
+| **camada 2** — A insere no aluno de B | bloqueado | violação de RLS |
+| **camada 2** — A cria aluno próprio | OK | `OK` |
+| reaplicar 0011 e 0012 | idempotente | `exit=0` nas duas |
+| 0011 rodada **depois** da 0012 | falha limpa | `exit=3`, RLS e policies intactos |
+
+`npx tsc --noEmit`, `npm run lint` e `npm run build` limpos.
+
+### Impactos
+
+- **Arquitetura**: o projeto deixa de ocupar o `public`, liberando a instância
+  para outros sistemas sem risco de colisão.
+- **Operacional**: passa a existir um pré-requisito na stack do Supabase
+  (`PGRST_DB_SCHEMAS`). Sem ele a API responde 404 em tudo — sintoma que parece
+  "app quebrado" e não "configuração faltando".
+- **Usuário**: nenhum efeito visível; é mudança de infraestrutura.
+
+### Pendências
+
+- **Não apliquei nada no servidor.** O painel `164.68.116.21:3000` e o webhook
+  de deploy não são alcançáveis deste ambiente (porta 3000 bloqueada na saída);
+  testei de novo nesta sessão. O Kong público segue devolvendo 404 catch-all.
+- **Nenhuma credencial foi commitada.** Os tokens do GitHub e do EasyPanel não
+  foram usados e precisam ser rotacionados — estão expostos em conversa.
+- A 0012 **move dados reais**. Validada contra base reconstruída, não contra
+  produção. Fazer backup antes.
+- `lib/types/database.ts` continua `any` e agora também desatualizado quanto ao
+  schema.
+- `docker build` não executado (sem daemon Docker no ambiente).
+
+### Arquivos principais envolvidos
+- `supabase/migrations/0012_schema_do_projeto.sql`
+- `lib/env.ts`, `lib/supabase/client.ts`, `lib/supabase/server.ts`
+- `docs/SUPABASE_AUTO_HOSPEDADO.md`, `.env.example`
+
+---
+
+
 ## 2026-07-31 — RLS completo e as chaves de exemplo do Supabase
 
 ### Objetivo

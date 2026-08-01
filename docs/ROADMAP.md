@@ -1,5 +1,56 @@
 # Roadmap — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
+## Atualização — 2026-08-01 (regra geral: um Supabase, vários projetos)
+
+Regra de arquitetura estabelecida: uma única instância do Supabase hospeda
+vários projetos, cada um com schema e usuários isolados.
+
+### Concluído
+- [x] **Migration 0012 — schema dedicado por projeto.** O projeto sai do
+  `public` e passa a ocupar o schema `periodiza`. Sem isso, dois projetos na
+  mesma instância colidem: `clients`, `sessions`, `profiles` e `equipment` são
+  nomes que qualquer sistema usa, e o segundo a rodar migrations passaria a
+  escrever nas tabelas do primeiro. Move tabelas, views, enums e funções;
+  `set schema` leva junto índices, constraints, triggers, RLS e policies.
+- [x] **Correção dentro da própria 0012**: mover a função não conserta o que ela
+  faz por dentro. Cinco funções (`handle_new_user`, `current_org_id`,
+  `is_staff`, `is_org_owner`, `is_org_member`) tinham `public.` no corpo, e sete
+  tinham `search_path = pg_catalog, public, pg_temp`. Sintoma observado no
+  teste: `ERROR: relation "public.profiles" does not exist` ao inserir em
+  `auth.users`, disparado pelo trigger. A migration passou a reescrever corpo e
+  `search_path` das funções movidas.
+- [x] **`SCHEMA_DO_PROJETO` no app** (`lib/env.ts`), aplicado via
+  `db: { schema }` nos clientes de browser e servidor.
+- [x] Documentada a ordem obrigatória `0011 → 0012` e o requisito de
+  `PGRST_DB_SCHEMAS` na stack do Supabase.
+
+### Em andamento
+- [ ] **CRÍTICO — rotacionar `JWT_SECRET` e as chaves do Supabase.** As chaves
+  em uso são as de exemplo (`iss: supabase-demo`), públicas. Nem a camada 1 nem
+  a camada 2 protegem contra um `service_role` forjado.
+- [ ] **CRÍTICO** — publicar o Kong (porta 8000) no domínio; segue 404 catch-all.
+- [ ] **CRÍTICO** — aplicar 0010, 0011 e 0012, nessa ordem.
+- [ ] Incluir `periodiza` em `PGRST_DB_SCHEMAS` e reiniciar o serviço `rest`.
+- [ ] Confirmar o primeiro build verde no EasyPanel.
+
+### Próximos passos
+- [ ] Rotacionar o token do GitHub e o de API do EasyPanel, expostos em conversa.
+- [ ] Suíte de testes automatizados.
+- [ ] Regenerar `lib/types/database.ts` apontando para o schema novo.
+
+### Riscos e débitos técnicos
+- **A 0012 move dados reais.** Foi validada contra base reconstruída das
+  migrations, não contra a base de produção. Fazer backup antes de aplicar.
+- **`PGRST_DB_SCHEMAS` é pré-requisito silencioso**: sem ele a API responde 404
+  em tudo, mesmo com tabelas e RLS corretos — sintoma que parece "app quebrado",
+  não "configuração faltando".
+- A reescrita de funções na 0012 substitui a string `public.` no corpo. Nenhuma
+  função deste projeto tem essa string dentro de literal de texto; se alguma
+  passar a ter, a substituição precisa virar reescrita explícita.
+- `lib/types/database.ts` segue `any` e agora também desatualizado quanto ao
+  schema.
+
+
 ## Atualização — 2026-07-31 (RLS completo e chaves de exemplo do Supabase)
 
 Pedido de rodar contra o Supabase auto-hospedado real. Auditar as credenciais e

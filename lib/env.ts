@@ -34,6 +34,24 @@ import { z } from 'zod'
  */
 export const NOME_COOKIE_SESSAO = 'sb-periodiza-auth-token'
 
+/**
+ * Schema deste projeto no Postgres.
+ *
+ * Regra geral desta instalacao: uma unica instancia do Supabase hospeda varios
+ * projetos, e o isolamento acontece em duas camadas.
+ *
+ *   camada 1 — entre projetos : schema proprio (esta constante + migration 0012)
+ *   camada 2 — entre usuarios : RLS dentro do schema (migration 0011)
+ *
+ * Sem a camada 1 dois projetos colidem no `public`: `clients`, `sessions`,
+ * `equipment` e `profiles` sao nomes que qualquer sistema usa.
+ *
+ * Precisa bater com o schema da migration 0012 e estar em `PGRST_DB_SCHEMAS`
+ * na stack do Supabase, senao a API responde 404 em tudo.
+ */
+export const SCHEMA_DO_PROJETO =
+  process.env.NEXT_PUBLIC_SUPABASE_SCHEMA ?? 'periodiza'
+
 const esquemaPublico = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z
     .string()
