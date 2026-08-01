@@ -1,5 +1,99 @@
 # Diário de Bordo - Periodiza
 
+## 2026-08-01 — Script de aplicação das migrations no servidor
+
+### Objetivo
+Entregar o que eu havia oferecido na resposta anterior: um script único que
+executa no servidor os passos que estavam manuais — aplicar `0010 → 0011 → 0012`
+e conferir o `PGRST_DB_SCHEMAS`.
+
+Motivação: a sequência tem três armadilhas que erram em silêncio — ordem
+obrigatória entre as migrations, backup antes de mover tabelas, e um
+pré-requisito de configuração (`PGRST_DB_SCHEMAS`) cujo sintoma é "app quebrado"
+e não "configuração faltando".
+
+### Alterações realizadas
+
+- **`scripts/aplicar-no-servidor.sh`** (novo): descobre o container do Postgres
+  da stack, faz `pg_dump` antes de qualquer alteração, aplica as três migrations
+  na ordem com `ON_ERROR_STOP`, roda 7 verificações e confere o
+  `PGRST_DB_SCHEMAS` do container do PostgREST.
+- **`package.json`**: `npm run db:deploy`.
+- **`.gitignore`**: `backups/`.
+- **`docs/MIGRATIONS.md`** e **`README.md`**: documentação do comando.
+
+Três defeitos foram encontrados testando o próprio script e corrigidos antes do
+commit:
+
+| Defeito | Como apareceu | Correção |
+|---|---|---|
+| Reexecução falhava | rodar duas vezes quebrava na 0010 — depois da 0012 as tabelas saem do `public`, e 0010/0011 referenciam `public.*` | detecta o estado final e pula para a verificação |
+| Erro real ficava oculto | a saída era filtrada por `grep -i error`, que engolia mensagens sem essa palavra | mostra a saída inteira do psql |
+| Mensagem confusa sem Docker | só `command -v docker` passava, e o erro de socket do daemon escondia a mensagem útil | passou a usar `docker info` |
+
+### Decisões técnicas
+
+**Dois modos (docker e `SUPABASE_DB_URL`).** O modo docker é o uso real no
+servidor; o de conexão direta existe porque é o único que eu conseguia testar
+aqui. Manter os dois deu cobertura de teste sem inventar resultado.
+
+**Backup obrigatório, com escape explícito.** A 0012 move tabelas — um erro ali
+custa dados. `--pular-backup` existe para quem já tem backup por fora, mas o
+padrão é seguro.
+
+**As verificações espelham os bugs reais desta série.** "Nenhuma tabela com RLS
+e sem policy" e "nenhuma tabela de negócio sem RLS" são exatamente as duas
+falhas da 0008; "nenhuma função apontando para `public`" é o bug que apareceu ao
+testar a 0012. São regressões que já aconteceram, não hipóteses.
+
+**Detecção do container por imagem contendo `supabase`.** Filtrar só por
+`postgres` pegaria o banco de outro projeto no mesmo servidor. Se a nomenclatura
+for diferente, `CONTAINER_DB=<nome>` resolve.
+
+### Validações executadas
+
+Modo `SUPABASE_DB_URL`, contra PostgreSQL 16 com o schema reconstruído das
+migrations 0001–0009:
+
+| Cenário | Esperado | Obtido |
+|---|---|---|
+| execução completa | aplica as 3 e verifica | backup 76K, `0010 OK`, `0011 OK`, `0012 OK`, 7/7 verificações |
+| reexecução | segura | detecta estado final, pula aplicação, 7/7 |
+| sabotagem (`drop policy clients_acesso`) | detecta | `nenhuma tabela com RLS e sem policy: FALHOU (esperado 0, obtido 1)` |
+| exit code com falha | ≠ 0 | `1` |
+| exit code com banco sadio | 0 | `0` |
+| `bash -n` | sem erro de sintaxe | OK |
+| `--help` | mostra o cabeçalho | OK |
+| sem Docker e sem `SUPABASE_DB_URL` | mensagem clara, exit 1 | OK |
+
+`npx tsc --noEmit`, `npm run lint` e `npm run build` limpos.
+
+### Impactos
+
+- **Operacional**: a sequência de três migrações com ordem obrigatória, backup e
+  um pré-requisito de configuração vira um comando com verificação automática.
+- **Arquitetura/infra**: nenhuma mudança — o script só orquestra o que já existia.
+- **Usuário final**: nenhum efeito direto.
+
+### Pendências
+
+- **O modo docker não pôde ser testado**: não há daemon Docker neste ambiente. A
+  descoberta do container e a leitura de `PGRST_DB_SCHEMAS` só se confirmam no
+  servidor. O modo `SUPABASE_DB_URL` foi testado ponta a ponta.
+- **Nada foi aplicado no servidor.** O painel `164.68.116.21:3000` e o webhook de
+  deploy seguem inalcançáveis daqui; os tokens fornecidos não foram usados.
+- Continuam pendentes, todos do lado do servidor: rotacionar `JWT_SECRET` e as
+  chaves (`iss: supabase-demo`), publicar o Kong no domínio, rodar
+  `npm run db:deploy`, e incluir `periodiza` em `PGRST_DB_SCHEMAS`.
+
+### Arquivos principais envolvidos
+- `scripts/aplicar-no-servidor.sh`
+- `package.json`, `.gitignore`
+- `docs/MIGRATIONS.md`, `README.md`
+
+---
+
+
 ## 2026-08-01 — Regra geral: um Supabase, vários projetos, schemas isolados
 
 ### Objetivo

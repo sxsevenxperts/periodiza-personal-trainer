@@ -35,3 +35,6 @@ yarn-error.log*
 
 # deploy
 .vercel
+
+# Dumps gerados por scripts/aplicar-no-servidor.sh — nunca versionar
+backups/

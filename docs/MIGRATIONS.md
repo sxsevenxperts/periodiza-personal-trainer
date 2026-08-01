@@ -11,6 +11,50 @@ numérica. O deploy do app **não** as executa — é um passo manual.
 | 0010 | **não** — pendente |
 | 0011 | **não** — pendente (RLS completo, ver abaixo) |
 
+## Aplicar tudo de uma vez (recomendado)
+
+```bash
+# no servidor onde a stack do Supabase roda
+npm run db:deploy
+```
+
+O script (`scripts/aplicar-no-servidor.sh`) faz o caminho inteiro:
+
+1. descobre o container do Postgres da stack (ou usa `SUPABASE_DB_URL`);
+2. **faz backup** com `pg_dump` — a 0012 move tabelas, então isso não é opcional;
+3. aplica `0010 → 0011 → 0012`, **nessa ordem**, com `ON_ERROR_STOP`;
+4. roda 7 verificações;
+5. confere se `PGRST_DB_SCHEMAS` já inclui o schema do projeto.
+
+Sai com código diferente de zero se qualquer verificação falhar.
+
+**Rodar de novo é seguro.** Depois da 0012 as tabelas saem do `public`, e as
+migrations 0010/0011 referenciam `public.*` — reexecutá-las falharia. O script
+detecta o estado final e pula direto para a verificação.
+
+### Sem acesso ao servidor
+
+```bash
+export SUPABASE_DB_URL="postgresql://postgres:SENHA@HOST:5432/postgres"
+npm run db:deploy
+```
+
+### O que as verificações cobrem
+
+| Verificação | Por que existe |
+|---|---|
+| schema do projeto existe | a 0012 aplicou |
+| RPC `search_exercises` registrada | a 0010 aplicou |
+| `search_vector` preenchido | o backfill da 0010 rodou |
+| **nenhuma tabela com RLS e sem policy** | foi o bug da 0008 — nega tudo em silêncio |
+| **nenhuma tabela de negócio sem RLS** | foi o outro bug da 0008 — expõe tudo |
+| **nenhuma função apontando para `public`** | bug encontrado ao testar a 0012: função movida com `search_path` velho passaria a ler a tabela homônima de outro projeto |
+| `public` sem tabelas deste projeto | a mudança de schema completou |
+
+Os backups vão para `backups/`, que está no `.gitignore`.
+
+---
+
 ## 0011 — RLS completo (crítica)
 
 A 0008 deixou o isolamento pela metade, de três formas:

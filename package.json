@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "seed": "tsx scripts/seed.ts",
     "db:reset": "supabase db reset",
-    "db:migrate": "bash scripts/apply-migration.sh"
+    "db:migrate": "bash scripts/apply-migration.sh",
+    "db:deploy": "bash scripts/aplicar-no-servidor.sh"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

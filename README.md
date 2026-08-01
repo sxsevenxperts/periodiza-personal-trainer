@@ -58,6 +58,8 @@ Scripts disponíveis:
 | `npm run test:watch` | Vitest em watch |
 | `npm run seed` | Popula taxonomia e catálogo (`tsx scripts/seed.ts`) |
 | `npm run db:reset` | `supabase db reset` — recria o banco local e reaplica as migrations |
+| `npm run db:migrate` | Aplica uma migration avulsa e verifica (`SUPABASE_DB_URL` no ambiente) |
+| `npm run db:deploy` | Aplica 0010→0011→0012 no servidor, com backup e 7 verificações |
 
 ---
 

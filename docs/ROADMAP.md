@@ -1,5 +1,46 @@
 # Roadmap — PERSONAL TRAINING DOUTOR LUIZ C. JÚNIOR
 
+## Atualização — 2026-08-01 (script de aplicação no servidor)
+
+### Concluído
+- [x] **`npm run db:deploy`** (`scripts/aplicar-no-servidor.sh`): aplica
+  `0010 → 0011 → 0012` na ordem correta, com backup obrigatório via `pg_dump`
+  antes (a 0012 move tabelas), `ON_ERROR_STOP` em cada uma e 7 verificações no
+  fim. Dois modos: descoberta automática do container do Postgres no servidor,
+  ou `SUPABASE_DB_URL` quando a porta 5432 estiver acessível.
+- [x] Verificação de `PGRST_DB_SCHEMAS` incluída no script — era o
+  pré-requisito silencioso que faz a API responder 404 em tudo mesmo com o
+  banco correto.
+- [x] **Reexecução tornada segura.** Na primeira versão, rodar o script duas
+  vezes falhava: depois da 0012 as tabelas saem do `public` e as migrations
+  0010/0011 referenciam `public.*`. O script passou a detectar o estado final e
+  pular direto para a verificação.
+- [x] Exibição de erro corrigida: a versão inicial filtrava a saída por
+  `grep -i error` e engolia mensagens que não continham essa palavra.
+- [x] Detecção do Docker corrigida: verificar só `command -v docker` deixava o
+  erro de socket do daemon esconder a mensagem útil. Passou a usar `docker info`.
+- [x] `backups/` adicionado ao `.gitignore`.
+
+### Em andamento
+- [ ] **CRÍTICO** — rotacionar `JWT_SECRET` e as chaves (`iss: supabase-demo`).
+- [ ] **CRÍTICO** — publicar o Kong (porta 8000) no domínio.
+- [ ] **CRÍTICO** — rodar `npm run db:deploy` no servidor.
+- [ ] Incluir `periodiza` em `PGRST_DB_SCHEMAS` e reiniciar o serviço `rest`.
+
+### Próximos passos
+- [ ] Rotacionar o token do GitHub e o de API do EasyPanel.
+- [ ] Suíte de testes automatizados.
+
+### Riscos e débitos técnicos
+- O modo docker do script **não pôde ser testado** aqui: não há daemon Docker
+  no ambiente. A descoberta do container e a leitura de `PGRST_DB_SCHEMAS` só
+  se confirmam no servidor. O modo `SUPABASE_DB_URL` foi testado ponta a ponta.
+- O backup é um `pg_dump` do banco inteiro para `backups/`. Em base grande isso
+  consome disco e tempo; existe `--pular-backup` para quem já tem backup por fora.
+- A descoberta do container filtra por imagem contendo `supabase`. Uma stack com
+  nomenclatura diferente exige `CONTAINER_DB=<nome>`.
+
+
 ## Atualização — 2026-08-01 (regra geral: um Supabase, vários projetos)
 
 Regra de arquitetura estabelecida: uma única instância do Supabase hospeda
